@@ -141,18 +141,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const paginated = filtered.slice((state.currentPage - 1) * state.rowsPerPage, state.currentPage * state.rowsPerPage);
 
         tableBody.innerHTML = paginated.map(p => `
-            <tr class="bg-white border-b hover:bg-gray-50">
-                <td class="px-6 py-4 font-medium">${p.id}</td>
-                <td class="px-6 py-4">${p.supplierName || 'N/A'}</td>
-                <td class="px-6 py-4">${formatDateTime(p.date)}</td>
-                <td class="px-6 py-4 font-semibold text-right">${formatCurrency(p.total)}</td>
-                <td class="px-6 py-4 text-left whitespace-nowrap">
-                    <button class="text-blue-500 hover:underline" onclick="app.viewPurchaseDetails('${p.id}')">Xem</button>
-                    <button class="text-green-600 hover:underline ml-2" onclick="app.editPurchase('${p.id}')">Sửa</button>
-                </td>
-            </tr>
-        `).join('');
-
+    <tr class="bg-white border-b hover:bg-gray-50">
+        <td class="px-6 py-4 font-medium">${p.id}</td>
+        <td class="px-6 py-4">${p.supplierName || 'N/A'}</td>
+        <td class="px-6 py-4">${formatDateTime(p.date)}</td>
+        <td class="px-6 py-4 font-semibold text-right">${formatCurrency(p.total)}</td>
+        <td class="px-6 py-4 text-left whitespace-nowrap">
+            <button class="text-blue-500 hover:underline" onclick="app.viewPurchaseDetails('${p.id}')">Xem</button>
+            <button class="text-green-600 hover:underline ml-2" onclick="app.editPurchase('${p.id}')">Sửa</button>
+            <button class="text-red-600 hover:underline ml-2" onclick="app.deletePurchase('${p.id}')">Xóa</button>
+        </td>
+    </tr>
+`).join('');
         renderPagination(filtered.length);
     };
 
@@ -212,6 +212,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             newPrintBtn.addEventListener('click', () => { window.print(); });
             detailModal.classList.remove('hidden');
         },
+         deletePurchase: async (purchaseId) => {
+        if (confirm('Bạn có chắc chắn muốn xóa phiếu nhập này? Thao tác này không thể hoàn tác.')) {
+            try {
+                // Gọi hàm xóa từ db.js
+                await db.deletePurchase(purchaseId);
+
+                // Cập nhật lại state và render lại bảng
+                state.purchases = state.purchases.filter(p => p.id !== purchaseId);
+                renderPurchaseHistory();
+
+                alert('Đã xóa phiếu nhập thành công!');
+            } catch (error) {
+                console.error("Lỗi khi xóa phiếu nhập:", error);
+                alert('Đã xảy ra lỗi khi xóa phiếu nhập.');
+            }
+        }
+    }
     };
     
     // --- INITIALIZATION ---

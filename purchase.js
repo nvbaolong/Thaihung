@@ -1,5 +1,24 @@
 document.addEventListener('DOMContentLoaded', async () => {
     await db.init();
+// --- KIỂM TRA CÓ PHIẾU NHẬP CẦN CHỈNH SỬA KHÔNG ---
+const editPurchaseId = sessionStorage.getItem('editPurchaseId');
+if (editPurchaseId) {
+  const purchaseToEdit = await db.getPurchaseById(editPurchaseId);
+  if (purchaseToEdit) {
+    state.currentPurchase = {
+      id: purchaseToEdit.id,
+      supplierName: purchaseToEdit.supplierName,
+      items: structuredClone(purchaseToEdit.items),
+      total: purchaseToEdit.total,
+      paidAmount: purchaseToEdit.paidAmount,
+      debtAmount: purchaseToEdit.debtAmount,
+      originalPurchaseId: purchaseToEdit.id,
+    };
+    renderCurrentPurchaseUI();
+    alert(`🧾 Đang chỉnh sửa phiếu nhập: ${purchaseToEdit.id}`);
+  }
+  sessionStorage.removeItem('editPurchaseId');
+}
 
     let state = {
         products: [],
@@ -104,35 +123,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         updatePurchaseSummary();
     };
     
-    const renderPurchaseTabs = () => {
-        Array.from(purchaseTabsContainer.children).forEach(child => {
-            if (child.id !== 'new-purchase-btn') purchaseTabsContainer.removeChild(child);
+    // File: purchase.js
+
+const renderPurchaseTabs = () => {
+    Array.from(purchaseTabsContainer.children).forEach(child => {
+        if (child.id !== 'new-purchase-btn') purchaseTabsContainer.removeChild(child);
+    });
+
+    state.purchaseTabs.forEach((purchase, index) => {
+        const tabButton = document.createElement('button');
+        tabButton.className = `px-4 py-2 text-sm font-medium border-r border-gray-200 ${purchase.id === state.activePurchaseId ? 'bg-white text-blue-600' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`;
+        
+        // THAY ĐỔI LOGIC HIỂN THỊ TÊN TAB
+        const tabName = purchase.originalPurchaseId 
+            ? `Sửa PN ${purchase.originalPurchaseId.slice(-4)}` 
+            : `Phiếu ${index + 1}`;
+        tabButton.textContent = tabName;
+        tabButton.dataset.id = purchase.id;
+
+        tabButton.addEventListener('click', () => {
+            state.activePurchaseId = purchase.id;
+            renderActivePurchaseUI();
         });
 
-        state.purchaseTabs.forEach((purchase, index) => {
-            const tabButton = document.createElement('button');
-            tabButton.className = `px-4 py-2 text-sm font-medium border-r border-gray-200 ${purchase.id === state.activePurchaseId ? 'bg-white text-blue-600' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`;
-            tabButton.textContent = `Phiếu ${index + 1}`;
-            tabButton.dataset.id = purchase.id;
-
-            tabButton.addEventListener('click', () => {
-                state.activePurchaseId = purchase.id;
-                renderActivePurchaseUI();
-            });
-
-            if (state.purchaseTabs.length > 1) {
-                const closeBtn = document.createElement('span');
-                closeBtn.innerHTML = '&times;';
-                closeBtn.className = 'ml-2 px-1 rounded-full hover:bg-red-200 text-red-500 font-bold';
-                closeBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    closePurchaseTab(purchase.id);
-                };
-                tabButton.appendChild(closeBtn);
-            }
-            purchaseTabsContainer.insertBefore(tabButton, newPurchaseBtn);
-        });
-    };
+        if (state.purchaseTabs.length > 1) {
+            const closeBtn = document.createElement('span');
+            closeBtn.innerHTML = '&times;';
+            closeBtn.className = 'ml-2 px-1 rounded-full hover:bg-red-200 text-red-500 font-bold';
+            closeBtn.onclick = (e) => {
+                e.stopPropagation();
+                closePurchaseTab(purchase.id);
+            };
+            tabButton.appendChild(closeBtn);
+        }
+        purchaseTabsContainer.insertBefore(tabButton, newPurchaseBtn);
+    });
+};
     
     const renderActivePurchaseUI = () => {
         const activePurchase = getActivePurchase();
@@ -336,23 +362,46 @@ productSearchInput.addEventListener('input', (e) => {
     });
 
     // THAY THẾ TOÀN BỘ HÀM savePurchaseBtn CŨ BẰNG HÀM MỚI NÀY
+// File: purchase.js
+
+// THAY THẾ TOÀN BỘ HÀM savePurchaseBtn CŨ BẰNG HÀM MỚI NÀY
 savePurchaseBtn.addEventListener('click', async () => {
     const activePurchase = getActivePurchase();
     if (!activePurchase || activePurchase.items.length === 0) return;
 
-    const newPurchase = {
-        id: `PN-${Date.now()}`, 
-        date: new Date().toISOString(),
-        supplierName: activePurchase.supplierName.trim() || 'Không có', // Nếu trống thì ghi "Không có"
-        items: activePurchase.items, 
-        total: activePurchase.total,
-    };
+    // KIỂM TRA XEM ĐÂY LÀ TAB CHỈNH SỬA HAY KHÔNG
+    if (activePurchase.originalPurchaseId) {
+        // --- LOGIC CẬP NHẬT ---
+        const allPurchases = await db.getAllPurchases();
+        const purchaseToUpdate = allPurchases.find(p => p.id === activePurchase.originalPurchaseId);
 
-    await db.addPurchase(newPurchase);
+        if (purchaseToUpdate) {
+            // Cập nhật các trường thông tin
+            purchaseToUpdate.supplierName = activePurchase.supplierName.trim() || 'Không có';
+            purchaseToUpdate.items = activePurchase.items;
+            purchaseToUpdate.total = activePurchase.total;
+            purchaseToUpdate.date = new Date().toISOString(); // Cập nhật lại ngày chỉnh sửa
+
+            await db.updatePurchase(purchaseToUpdate);
+            alert(`Đã cập nhật thành công phiếu nhập: ${purchaseToUpdate.id}`);
+        } else {
+            alert(`Không tìm thấy phiếu nhập gốc để cập nhật.`);
+        }
+    } else {
+        // --- LOGIC TẠO MỚI (giữ nguyên như cũ) ---
+        const newPurchase = {
+            id: `PN-${Date.now()}`, 
+            date: new Date().toISOString(),
+            supplierName: activePurchase.supplierName.trim() || 'Không có',
+            items: activePurchase.items, 
+            total: activePurchase.total,
+        };
+
+        await db.addPurchase(newPurchase);
+        showPurchaseDetailModal(newPurchase); 
+    }
     
-    // Thay vì alert, gọi hàm hiển thị popup mới
-    showPurchaseDetailModal(newPurchase); 
-    
+    // Đóng tab hiện tại sau khi lưu
     closePurchaseTab(activePurchase.id);
 });
 

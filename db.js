@@ -124,7 +124,7 @@
         });
     }
 
-    // --- EXPORT API RA BÊN NGOÀI ---
+
     window.db = {
         init: initDB,
         STORES: STORES,
@@ -147,6 +147,12 @@
         // THÊM MỚI: Các hàm cho Nhập Hàng và NCC
         getAllPurchases: () => getAll(STORES.purchases),
         addPurchase: (purchase) => add(STORES.purchases, purchase),
+          updatePurchase: (purchase) => update(STORES.purchases, purchase),
+       deletePurchase: (id) => remove(STORES.purchases, id),
+    
+    getAllSuppliers: () => getAll(STORES.suppliers),
+        // THÊM DÒNG NÀY VÀO
+        deletePurchase: (id) => remove(STORES.purchases, id),
         
         getAllSuppliers: () => getAll(STORES.suppliers),
         addSupplier: (supplier) => add(STORES.suppliers, supplier),
