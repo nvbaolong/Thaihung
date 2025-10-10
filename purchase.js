@@ -204,20 +204,72 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderActivePurchaseUI();
     });
 
-    productSearchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
-        if (query) {
-            const results = state.products.filter(p => p.name.toLowerCase().includes(query) || p.id.toLowerCase().includes(query));
-            renderAutocompleteResults(results.slice(0, 10), autocompleteResultsContainer, (product) => {
-                app.addToPurchase(product.id);
-                productSearchInput.value = '';
-                autocompleteResultsContainer.classList.add('hidden');
-            });
-            autocompleteResultsContainer.classList.remove('hidden');
-        } else {
-            autocompleteResultsContainer.classList.add('hidden');
-        }
+    // --- TÌM KIẾM NÂNG CAO CHO SẢN PHẨM NHẬP HÀNG ---
+productSearchInput.addEventListener('input', (e) => {
+    const rawQuery = e.target.value.trim();
+    const query = rawQuery.toLowerCase();
+
+    if (!query) {
+        autocompleteResultsContainer.classList.add('hidden');
+        return;
+    }
+
+    const removeDiacritics = (str) =>
+        str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+
+    const normalizedQuery = removeDiacritics(query);
+    const keywords = normalizedQuery.split(/\s+/).filter(Boolean);
+    let results = state.products;
+
+    // --- Lọc theo nhiều từ khóa ---
+    results = results.filter(p => {
+        const normalizedName = removeDiacritics(p.name.toLowerCase());
+        const unit = (p.unit || '').toLowerCase();
+        return keywords.every(kw =>
+            normalizedName.includes(kw) ||
+            String(p.id).toLowerCase().includes(kw) ||
+            unit.includes(kw)
+        );
     });
+
+    // --- Lọc theo giá nhập ---
+    const priceMatch = rawQuery.match(/[<>]=?\s*\d+/);
+    if (priceMatch) {
+        const expr = priceMatch[0].replace(/\s/g, '');
+        const num = parseFloat(expr.match(/\d+/)?.[0] || 0);
+        if (expr.startsWith('<')) {
+            results = results.filter(p => p.importPrice < num);
+        } else if (expr.startsWith('>')) {
+            results = results.filter(p => p.importPrice > num);
+        } else if (expr.startsWith('=')) {
+            results = results.filter(p => p.importPrice === num);
+        }
+    }
+
+    // --- Hiển thị kết quả ---
+    const topResults = results.slice(0, 15);
+    autocompleteResultsContainer.innerHTML = topResults.map(p => `
+        <div class="p-2 hover:bg-blue-50 cursor-pointer border-b last:border-0" data-id="${p.id}">
+            <div class="font-semibold">${p.name} <span class="text-sm text-gray-500">(${p.unit || ''})</span></div>
+            <div class="flex justify-between text-sm text-gray-700">
+                <span>Mã: ${p.id}</span>
+                <span>Giá nhập: <span class="text-blue-600 font-semibold">${new Intl.NumberFormat('vi-VN').format(p.importPrice)}đ</span></span>
+            </div>
+        </div>
+    `).join('');
+
+    autocompleteResultsContainer.classList.remove('hidden');
+
+    // --- Khi click chọn ---
+    autocompleteResultsContainer.querySelectorAll('[data-id]').forEach(el => {
+        el.addEventListener('click', () => {
+            app.addToPurchase(el.dataset.id);
+            productSearchInput.value = '';
+            autocompleteResultsContainer.classList.add('hidden');
+        });
+    });
+});
+
 
     supplierNameSearchInput.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase().trim();
