@@ -457,26 +457,65 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
 
     // --- Search Logic ---
     orderProductSearchInput.addEventListener('input', (e) => {
-        const query = removeDiacritics(e.target.value.toLowerCase().trim());
+    const rawQuery = e.target.value.trim();
+    const query = removeDiacritics(rawQuery.toLowerCase());
 
-        // Chỉ hiển thị dropdown nếu có ký tự trong ô tìm kiếm
-        if (query) {
-            const results = state.products.filter(p => 
-                removeDiacritics(p.name.toLowerCase()).includes(query) || 
-                String(p.id).toLowerCase().includes(query)
-            );
-            
-            renderAutocompleteResults(results.slice(0, 10), autocompleteResultsContainer, (product) => {
-                app.addToOrder(product.id);
-                orderProductSearchInput.value = '';
-                autocompleteResultsContainer.classList.add('hidden');
-            });
-            autocompleteResultsContainer.classList.remove('hidden');
-        } else {
-            // Nếu không có ký tự nào, ẩn dropdown đi
-            autocompleteResultsContainer.classList.add('hidden');
-        }
+    if (!query) {
+        autocompleteResultsContainer.classList.add('hidden');
+        return;
+    }
+
+    // --- Phân tích từ khóa nâng cao ---
+    const keywords = query.split(/\s+/).filter(Boolean);
+    let results = state.products;
+
+    // --- Lọc theo từ khóa ---
+    results = results.filter(p => {
+        const normalizedName = removeDiacritics(p.name.toLowerCase());
+        const unit = (p.unit || '').toLowerCase();
+
+        // Kiểm tra tất cả các từ phải khớp
+        const allKeywordsMatch = keywords.every(kw => 
+            normalizedName.includes(kw) || String(p.id).includes(kw) || unit.includes(kw)
+        );
+        return allKeywordsMatch;
     });
+
+    // --- Hỗ trợ tìm theo giá ---
+    const priceQuery = rawQuery.match(/[<>]=?\s*\d+/);
+    if (priceQuery) {
+        const expr = priceQuery[0].replace(/\s/g, '');
+        const num = parseFloat(expr.match(/\d+/)?.[0] || 0);
+        if (expr.startsWith('<')) {
+            results = results.filter(p => p.retailPrice < num);
+        } else if (expr.startsWith('>')) {
+            results = results.filter(p => p.retailPrice > num);
+        }
+    }
+
+    // --- Giới hạn và hiển thị kết quả ---
+    const topResults = results.slice(0, 15);
+    autocompleteResultsContainer.innerHTML = topResults.map(p => `
+        <div class="p-2 hover:bg-blue-50 cursor-pointer border-b last:border-0" data-id="${p.id}">
+            <div class="font-semibold">${p.name} <span class="text-sm text-gray-500">(${p.unit || ''})</span></div>
+            <div class="flex justify-between text-sm text-gray-700">
+                <span>Mã: ${p.id}</span>
+                <span>Giá lẻ: <span class="text-blue-600 font-semibold">${new Intl.NumberFormat('vi-VN').format(p.retailPrice)}đ</span></span>
+            </div>
+        </div>
+    `).join('');
+
+    autocompleteResultsContainer.classList.remove('hidden');
+
+    // --- Click chọn sản phẩm ---
+    autocompleteResultsContainer.querySelectorAll('[data-id]').forEach(el => {
+        el.addEventListener('click', () => {
+            app.addToOrder(el.dataset.id);
+            orderProductSearchInput.value = '';
+            autocompleteResultsContainer.classList.add('hidden');
+        });
+    });
+});
 
     customerNameSearchInput.addEventListener('input', (e) => {
         const query = removeDiacritics(e.target.value.toLowerCase().trim());
