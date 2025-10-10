@@ -632,34 +632,48 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
     closeQuickCustomerModalBtn.addEventListener('click', () => quickCustomerModal.classList.add('hidden'));
 
     // Thay đổi 5: Chuyển hàm lưu khách hàng nhanh sang async và dùng db.js
-    saveQuickCustomerBtn.addEventListener('click', async () => {
-        const name = quickCustomerNameInput.value.trim();
-        const initialDebtRaw = quickCustomerInitialDebtInput.value.replace(/\./g, '');
-        const initialDebt = parseFloat(initialDebtRaw) || 0;
+    // File: script.js
 
-        if (!name) {
-            alert('Tên khách hàng là bắt buộc.');
-            return;
-        }
+// TÌM VÀ THAY THẾ TOÀN BỘ HÀM NÀY
+saveQuickCustomerBtn.addEventListener('click', async () => {
+    const name = quickCustomerNameInput.value.trim();
+    const initialDebtRaw = quickCustomerInitialDebtInput.value.replace(/\./g, '');
+    const initialDebt = parseFloat(initialDebtRaw) || 0;
 
-        const newCustomer = {
-            id: `KH-${Date.now()}`,
-            name: name,
-            initialDebt: initialDebt,
-        };
-        await db.addCustomer(newCustomer); // LƯU VÀO DB
-        state.customers.push(newCustomer); // Cập nhật state tạm thời
-        
-        quickCustomerModal.classList.add('hidden');
-        
-        const activeInvoice = getActiveInvoice();
-        if(activeInvoice) {
-            activeInvoice.customerName = name;
-            customerNameSearchInput.value = name;
-            updateCustomerDebtDisplay(name);
-        }
-        alert(`Đã thêm khách hàng mới: ${name}`);
-    });
+    if (!name) {
+        alert('Tên khách hàng là bắt buộc.');
+        return;
+    }
+
+    // --- LOGIC KIỂM TRA TÊN TRÙNG LẶP ---
+    const normalizedNewName = name.toLowerCase();
+    const isDuplicate = state.customers.some(customer => customer.name.toLowerCase() === normalizedNewName);
+
+    if (isDuplicate) {
+        alert(`Tên khách hàng "${name}" đã tồn tại. Vui lòng nhập tên khác.`);
+        return; // Dừng hàm nếu phát hiện tên trùng lặp
+    }
+    // --- KẾT THÚC LOGIC KIỂM TRA ---
+
+    // Nếu tên hợp lệ, tiếp tục tạo mới khách hàng
+    const newCustomer = {
+        id: `KH-${Date.now()}`,
+        name: name,
+        initialDebt: initialDebt,
+    };
+    await db.addCustomer(newCustomer);
+    state.customers.push(newCustomer);
+    
+    quickCustomerModal.classList.add('hidden');
+    
+    const activeInvoice = getActiveInvoice();
+    if(activeInvoice) {
+        activeInvoice.customerName = name;
+        customerNameSearchInput.value = name;
+        updateCustomerDebtDisplay(name);
+    }
+    alert(`Đã thêm khách hàng mới: ${name}`);
+});
 
     newInvoiceBtn.addEventListener('click', () => {
         const newInvoice = {

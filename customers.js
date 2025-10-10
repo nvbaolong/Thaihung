@@ -137,44 +137,70 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const closeCustomerModal = () => customerModal.classList.add('hidden');
 
-    saveCustomerBtn.addEventListener('click', async () => {
-        const id = customerIdHidden.value;
-        const name = customerNameInput.value.trim();
-        const debtValueRaw = customerInitialDebtInput.value.replace(/\./g, '');
-        const debtValue = parseFloat(debtValueRaw) || 0;
+   // File: customers.js
 
-        if (!name) {
-            alert('Tên khách hàng là bắt buộc.');
-            return;
+// TÌM VÀ THAY THẾ TOÀN BỘ HÀM NÀY
+saveCustomerBtn.addEventListener('click', async () => {
+    const id = customerIdHidden.value;
+    const name = customerNameInput.value.trim();
+    const debtValueRaw = customerInitialDebtInput.value.replace(/\./g, '');
+    const debtValue = parseFloat(debtValueRaw) || 0;
+
+    if (!name) {
+        alert('Tên khách hàng là bắt buộc.');
+        return;
+    }
+
+    // --- LOGIC KIỂM TRA TÊN TRÙNG LẶP ---
+    const normalizedNewName = name.toLowerCase();
+    let isDuplicate;
+
+    if (id) {
+        // Khi CHỈNH SỬA: tìm tên trùng ở một khách hàng KHÁC với khách hàng hiện tại
+        isDuplicate = state.customers.some(
+            c => c.name.toLowerCase() === normalizedNewName && c.id !== id
+        );
+    } else {
+        // Khi THÊM MỚI: tìm tên trùng ở bất kỳ khách hàng nào
+        isDuplicate = state.customers.some(
+            c => c.name.toLowerCase() === normalizedNewName
+        );
+    }
+
+    if (isDuplicate) {
+        alert(`Tên khách hàng "${name}" đã tồn tại. Vui lòng sử dụng tên khác.`);
+        return; // Dừng lại nếu tên đã tồn tại
+    }
+    // --- KẾT THÚC KIỂM TRA ---
+
+    if (id) { // Editing logic
+        const customer = state.customers.find(c => c.id === id);
+        if (customer) {
+            const customerDebts = calculateCustomerDebts();
+            // Lấy nợ từ các đơn hàng của TÊN CŨ
+            const debtFromOrders = customerDebts[customer.name] || 0;
+            
+            const newTotalDebt = debtValue;
+            const newInitialDebt = newTotalDebt - debtFromOrders;
+
+            customer.name = name; // Cập nhật tên mới
+            customer.initialDebt = newInitialDebt;
+            await db.updateCustomer(customer);
         }
-
-        if (id) { // Editing
-            const customer = state.customers.find(c => c.id === id);
-            if (customer) {
-                const customerDebts = calculateCustomerDebts();
-                const debtFromOrders = customerDebts[customer.name] || 0;
-                
-                const newTotalDebt = debtValue;
-                const newInitialDebt = newTotalDebt - debtFromOrders;
-
-                customer.name = name;
-                customer.initialDebt = newInitialDebt;
-                await db.updateCustomer(customer);
-            }
-        } else { // Adding
-            const newCustomer = {
-                id: `KH-${Date.now()}`,
-                name: name,
-                initialDebt: debtValue,
-            };
-            await db.addCustomer(newCustomer);
-        }
-        
-        // Tải lại và render lại
-        state.customers = await db.getAllCustomers();
-        renderCustomersTable();
-        closeCustomerModal();
-    });
+    } else { // Adding new logic
+        const newCustomer = {
+            id: `KH-${Date.now()}`,
+            name: name,
+            initialDebt: debtValue,
+        };
+        await db.addCustomer(newCustomer);
+    }
+    
+    // Tải lại dữ liệu mới nhất và render lại bảng
+    state.customers = await db.getAllCustomers();
+    renderCustomersTable();
+    closeCustomerModal();
+});
 
     const openPayDebtModal = (customer, totalDebt) => {
         payDebtCustomerId.value = customer.id;

@@ -413,22 +413,37 @@ savePurchaseBtn.addEventListener('click', async () => {
     });
     closeQuickSupplierModalBtn.addEventListener('click', () => quickSupplierModal.classList.add('hidden'));
     saveQuickSupplierBtn.addEventListener('click', async () => {
-        const name = quickSupplierNameInput.value.trim();
-        if (!name) return alert('Tên Nhà Cung Cấp không được để trống.');
+    const name = quickSupplierNameInput.value.trim();
+    if (!name) {
+        alert('Tên Nhà Cung Cấp không được để trống.');
+        return;
+    }
 
-        const newSupplier = { id: `NCC-${Date.now()}`, name };
-        await db.addSupplier(newSupplier);
-        state.suppliers.push(newSupplier);
-        
-        const activePurchase = getActivePurchase();
-        if(activePurchase) {
-             supplierNameSearchInput.value = name;
-             activePurchase.supplierName = name;
-        }
-       
-        quickSupplierModal.classList.add('hidden');
-        alert(`Đã thêm NCC mới: ${name}`);
-    });
+    // --- LOGIC KIỂM TRA TÊN TRÙNG LẶP ---
+    const normalizedNewName = name.toLowerCase();
+    const isDuplicate = state.suppliers.some(supplier => supplier.name.toLowerCase() === normalizedNewName);
+
+    if (isDuplicate) {
+        alert(`Tên nhà cung cấp "${name}" đã tồn tại. Vui lòng nhập tên khác.`);
+        return; // Dừng hàm nếu phát hiện tên trùng lặp
+    }
+    // --- KẾT THÚC LOGIC KIỂM TRA ---
+
+    // Nếu tên hợp lệ (không trùng), tiếp tục tạo mới
+    const newSupplier = { id: `NCC-${Date.now()}`, name };
+    await db.addSupplier(newSupplier);
+    state.suppliers.push(newSupplier);
+    
+    const activePurchase = getActivePurchase();
+    if(activePurchase) {
+         supplierNameSearchInput.value = name;
+         activePurchase.supplierName = name;
+    }
+   
+    quickSupplierModal.classList.add('hidden');
+    alert(`Đã thêm NCC mới: ${name}`);
+});
+
 
     // --- INITIALIZATION ---
     // THAY THẾ TOÀN BỘ HÀM INIT CŨ BẰNG HÀM NÀY
