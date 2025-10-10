@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Bán Hàng - Quản Lý Hàng Hóa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 font-sans">
+  <div class="flex h-screen">
+    <aside class="sidebar bg-white shadow-lg transition-all duration-300">
+      <div class="h-16 flex items-center justify-center border-b">
+        <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+      </div>
+      <nav class="mt-4">
+        <ul class="flex flex-col p-2 space-y-1">
+          <li><a href="index.html" class="flex items-center p-3 rounded-lg sidebar-item"><i class="fas fa-cash-register w-6 text-center"></i><span class="ml-3">Bán Hàng</span></a></li>
+          <li><a href="history.html" class="flex items-center p-3 rounded-lg sidebar-item"><i class="fas fa-history w-6 text-center"></i><span class="ml-3">Lịch Sử & Công Nợ</span></a></li>
+          <li><a href="manage.html" class="flex items-center p-3 rounded-lg sidebar-item sidebar-active"><i class="fas fa-boxes-stacked w-6 text-center"></i><span class="ml-3">Quản Lý Hàng Hóa</span></a></li>
+          <li><a href="customers.html" class="flex items-center p-3 rounded-lg sidebar-item"><i class="fas fa-users w-6 text-center"></i><span class="ml-3">Khách Hàng</span></a></li>
+          <li>
+    <a href="purchase.html" class="flex items-center p-3 rounded-lg sidebar-item">
+        <i class="fas fa-dolly w-6 text-center"></i>
+        <span class="ml-3">Nhập Hàng</span>
+    </a>
+</li>
+        </ul>
+      </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col overflow-hidden">
+      <header class="h-16 flex items-center justify-between px-6 bg-white border-b">
+        <h2 class="text-2xl font-semibold text-gray-900">Danh Sách Hàng Hóa</h2>
+        <div class="flex space-x-2">
+          <button id="import-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"><i class="fas fa-file-import mr-1"></i> Nhập</button>
+          <button id="export-btn" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded"><i class="fas fa-file-export mr-1"></i> Xuất</button>
+          <button id="add-product-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"><i class="fas fa-plus mr-1"></i> Thêm Mới</button>
+          <input type="file" id="import-input" class="hidden" accept=".xlsx">
+        </div>
+      </header>
+
+      <section class="p-6 flex-1 overflow-y-auto bg-gray-50">
+        <input id="search-bar" type="text" placeholder="Tìm kiếm theo tên hàng hóa..." class="w-full mb-4 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+
+        <div class="overflow-x-auto bg-white rounded-lg shadow">
+          <table class="w-full text-left">
+            <thead class="uppercase bg-gray-100 text-sm text-gray-700">
+              <tr>
+                <th class="px-6 py-3">ID</th>
+                <th class="px-6 py-3">Tên Hàng Hóa</th>
+                <th class="px-6 py-3">Đơn Vị</th>
+                <th class="px-6 py-3 text-right">Giá Nhập</th>
+                <th class="px-6 py-3 text-right">Giá Sỉ</th>
+                <th class="px-6 py-3 text-right">Giá Lẻ</th>
+                <th class="px-6 py-3 text-center">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="products-table"></tbody>
+          </table>
+        </div>
+
+        <div id="pagination-controls" class="flex justify-center items-center mt-4 space-x-2"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="product-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50 flex justify-center items-center">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+      <h3 id="modal-title" class="text-xl font-semibold mb-4">Thêm Sản Phẩm</h3>
+      <form id="product-form" class="space-y-3">
+        <input type="hidden" id="product-id">
+        <div><label class="block mb-1 text-gray-700">Tên hàng hóa</label><input id="product-name" type="text" required class="w-full border px-3 py-2 rounded"></div>
+        <div><label class="block mb-1 text-gray-700">Đơn vị</label><input id="product-unit" type="text" required class="w-full border px-3 py-2 rounded"></div>
+        <div class="grid grid-cols-3 gap-2">
+          <div><label class="block mb-1 text-gray-700">Giá nhập</label><input id="import-price" type="text" class="w-full border px-2 py-1 rounded text-right"></div>
+          <div><label class="block mb-1 text-gray-700">Giá sỉ</label><input id="wholesale-price" type="text" class="w-full border px-2 py-1 rounded text-right"></div>
+          <div><label class="block mb-1 text-gray-700">Giá lẻ</label><input id="retail-price" type="text" class="w-full border px-2 py-1 rounded text-right"></div>
+        </div>
+      </form>
+      <div class="flex justify-end mt-4 space-x-2">
+        <button id="save-product-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Lưu</button>
+        <button id="cancel-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded">Hủy</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="db.js"></script>
+  <script src="manage.js"></script>
+</body>
+</html>

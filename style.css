@@ -1,0 +1,98 @@
+/* Custom scrollbar for better aesthetics */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+    background: #a8a8a8;
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+/* Style for the active sidebar item */
+.sidebar-active {
+    background-color: #3b82f6; /* blue-500 */
+    color: #ffffff;
+}
+.sidebar-item:hover {
+    background-color: #eff6ff; /* blue-50 */
+    color: #1e40af; /* blue-800 */
+}
+/* Style for editable cells */
+.editable-cell:hover {
+    background-color: #eff6ff; /* blue-50 */
+}
+.editable-cell:focus {
+    background-color: #dbeafe; /* blue-100 */
+    outline: 2px solid #3b82f6; /* blue-500 */
+    border-radius: 4px;
+}
+
+/* NEW STYLES for tables */
+main table {
+    font-size: 0.875rem; /* text-sm */
+    color: #111827; /* text-gray-900 */
+}
+
+main table thead {
+    font-size: 0.75rem; /* text-xs */
+}
+
+/* Larger font for the main order table on the sales page */
+#current-order-items table {
+    font-size: 1rem; /* text-base */
+}
+#current-order-items table thead {
+     font-size: 0.875rem; /* text-sm */
+}
+
+/* Modal tables */
+#order-detail-modal table {
+    font-size: 0.875rem; /* text-sm */
+}
+#order-detail-modal table thead {
+    font-size: 0.75rem; /* text-xs */
+}
+
+/* NEW (FIXED): Responsive sidebar with hover effect */
+.sidebar {
+  width: 4.5rem; /* Rộng mặc định, chỉ đủ cho icon */
+  transition: width 0.3s ease-in-out;
+}
+
+.sidebar:hover {
+  width: 16rem; /* Mở rộng ra khi hover */
+}
+
+/* Sử dụng max-width để ẩn text và làm nó không chiếm diện tích */
+.sidebar .ml-3, .sidebar h1 {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden; /* Cần thiết cho transition max-width */
+  white-space: nowrap; /* Ngăn chữ bị xuống dòng */
+  transition: opacity 0.1s ease-out, max-width 0.3s ease-in-out;
+}
+
+/* Khi hover vào sidebar, hiện lại chữ và tiêu đề */
+.sidebar:hover .ml-3, .sidebar:hover h1 {
+  opacity: 1;
+  max-width: 150px; /* Một giá trị đủ lớn để text hiển thị đầy đủ */
+  transition-delay: 0.05s; /* Tinh chỉnh lại độ trễ */
+}
+
+/* Điều chỉnh vị trí của cả container A (sidebar-item) */
+.sidebar-item {
+  justify-content: center; /* Căn giữa icon khi sidebar thu gọn */
+}
+
+.sidebar:hover .sidebar-item {
+  justify-content: flex-start; /* Căn trái lại khi sidebar mở rộng */
+}
+/* Style cho toast message */
+#toast-message.show {
+    opacity: 1;
+}

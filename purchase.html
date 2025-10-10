@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Nhập Hàng</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="flex h-screen bg-gray-100">
+        <aside class="sidebar bg-white shadow-lg transition-all duration-300">
+            <div class="h-16 flex items-center justify-center border-b">
+                <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+            </div>
+            <nav class="mt-4">
+                <ul id="main-tabs" class="flex flex-col p-2 space-y-1">
+                    <li><a href="index.html" class="flex items-center p-3 rounded-lg sidebar-item"><i class="fas fa-cash-register w-6 text-center"></i><span class="ml-3">Bán Hàng</span></a></li>
+                    <li><a href="history.html" class="flex items-center p-3 rounded-lg sidebar-item"><i class="fas fa-history w-6 text-center"></i><span class="ml-3">Lịch Sử & Công Nợ</span></a></li>
+                    <li><a href="manage.html" class="flex items-center p-3 rounded-lg sidebar-item"><i class="fas fa-boxes-stacked w-6 text-center"></i><span class="ml-3">Quản Lý Hàng Hóa</span></a></li>
+                    <li><a href="customers.html" class="flex items-center p-3 rounded-lg sidebar-item"><i class="fas fa-users w-6 text-center"></i><span class="ml-3">Khách Hàng</span></a></li>
+                    <li><a href="purchase.html" class="flex items-center p-3 rounded-lg sidebar-item sidebar-active"><i class="fas fa-dolly w-6 text-center"></i><span class="ml-3">Nhập Hàng</span></a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <header class="h-16 flex items-center justify-between px-6 bg-white border-b">
+                 <h2 id="page-title" class="text-2xl font-semibold text-gray-900">Tạo Phiếu Nhập Hàng</h2>
+            </header>
+            
+            <div id="tab-content" class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 sm:p-6 lg:p-8">
+                <div id="purchase-tabs-container" class="flex items-center border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                    <button id="new-purchase-btn" class="px-4 py-2 text-lg font-bold text-blue-500 hover:bg-blue-100 rounded-tr-lg">+</button>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 bg-white p-6 rounded-b-lg lg:rounded-bl-lg lg:rounded-br-none shadow-md flex flex-col">
+                         <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-gray-900">Thông tin phiếu nhập</h3>
+                         </div>
+                         
+                         <div class="relative mb-4">
+                            <label for="product-search" class="sr-only">Tìm sản phẩm</label>
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400 pointer-events-none"></i>
+                            <input type="text" id="product-search" placeholder="Nhập tên hoặc mã sản phẩm để thêm vào phiếu..." class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <div id="autocomplete-results" class="absolute z-20 w-full bg-white border rounded-lg mt-1 max-h-60 overflow-y-auto hidden shadow-lg"></div>
+                         </div>
+                        
+                         <div id="supplier-name-wrapper" class="mb-4">
+                             <div class="flex items-center space-x-2">
+                                <div class="relative flex-grow">
+                                    <label for="supplier-name-search" class="sr-only">Tìm Nhà Cung Cấp</label>
+                                     <i class="fas fa-truck-field absolute left-3 top-3 text-gray-400 pointer-events-none"></i>
+                                    <input type="text" id="supplier-name-search" placeholder="Tìm hoặc nhập tên Nhà Cung Cấp..." class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                    <div id="supplier-autocomplete-results" class="absolute z-10 w-full bg-white border rounded-lg mt-1 max-h-60 overflow-y-auto hidden shadow-lg"></div>
+                                </div>
+                                <button id="quick-add-supplier-btn" class="flex-shrink-0 bg-blue-500 text-white px-3 py-2 rounded-lg font-semibold hover:bg-blue-600"><i class="fas fa-plus"></i></button>
+                             </div>
+                         </div>
+
+                         <div class="flex-grow min-h-[300px] max-h-[50vh] overflow-y-auto">
+                            <div id="current-purchase-items">
+                                 <p class="text-gray-900 text-center py-4">Chưa có sản phẩm nào</p>
+                            </div>
+                         </div>
+                    </div>
+
+                    <div id="summary-section" class="lg:col-span-1">
+                         <div class="bg-white p-6 rounded-lg shadow-md sticky top-8">
+                            <h3 class="text-xl font-bold text-gray-900 mb-4">Tổng Hợp Phiếu Nhập</h3>
+                            
+                            <div class="flex justify-between items-center text-2xl mb-4 pb-4 border-b">
+                                <span class="font-medium text-gray-600">Tổng tiền dự tính:</span>
+                                <span id="summary-total" class="font-bold text-blue-600">0</span>
+                            </div>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tổng mặt hàng:</label>
+                                    <div class="w-full pl-3 py-2 text-right text-lg font-bold">
+                                        <span id="summary-item-count">0</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-6 mt-6 border-t space-y-2">
+                                <button id="save-purchase-btn" class="w-full bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition duration-300 disabled:bg-gray-400">
+                                    <i class="fas fa-save mr-2"></i>Lưu Phiếu Nhập
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <div id="quick-supplier-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Thêm Nhanh Nhà Cung Cấp</h3>
+                <form id="quick-supplier-form" class="mt-2 px-7 py-3 space-y-4 text-left">
+                    <div>
+                        <label for="quick-supplier-name" class="block text-sm font-medium text-gray-700">Tên NCC:</label>
+                        <input type="text" id="quick-supplier-name" class="mt-1 w-full px-3 py-2 border rounded-lg" required>
+                    </div>
+                </form>
+                <div class="items-center px-4 py-3">
+                    <button id="save-quick-supplier-btn" class="px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-auto shadow-sm hover:bg-green-600">Lưu</button>
+                    <button id="close-quick-supplier-modal-btn" class="px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-auto shadow-sm hover:bg-gray-400 ml-2">Hủy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="purchase-detail-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-10 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-xl leading-6 font-medium text-gray-900" id="purchase-detail-modal-title">Chi Tiết Phiếu Nhập</h3>
+                <button id="close-purchase-detail-modal-btn" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times fa-lg"></i>
+                </button>
+            </div>
+            
+            <div id="purchase-detail-modal-content">
+                </div>
+            
+            <div class="items-center px-4 py-3 mt-4 border-t text-right">
+                <button id="download-pdf-btn" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-auto shadow-sm hover:bg-blue-600"><i class="fas fa-download mr-2"></i>Tải File</button>
+                <button id="close-purchase-detail-modal-btn-footer" class="px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-auto shadow-sm hover:bg-gray-400 ml-2">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+    <script src="db.js"></script>
+    <script src="purchase.js"></script>
+</body>
+</html>

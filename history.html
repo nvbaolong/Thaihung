@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Bán Hàng - Lịch Sử</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="flex h-screen bg-gray-100">
+        <aside class="sidebar bg-white shadow-lg transition-all duration-300">
+            <div class="h-16 flex items-center justify-center border-b">
+                <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+            </div>
+            <nav class="mt-4">
+                <ul id="main-tabs" class="flex flex-col p-2 space-y-1">
+                    <li><a href="index.html" class="flex items-center p-3 rounded-lg sidebar-item"><i class="fas fa-cash-register w-6 text-center"></i><span class="ml-3">Bán Hàng</span></a></li>
+                    <li><a href="history.html" class="flex items-center p-3 rounded-lg sidebar-item sidebar-active"><i class="fas fa-history w-6 text-center"></i><span class="ml-3">Lịch Sử & Công Nợ</span></a></li>
+                    <li><a href="manage.html" class="flex items-center p-3 rounded-lg sidebar-item"><i class="fas fa-boxes-stacked w-6 text-center"></i><span class="ml-3">Quản Lý Hàng Hóa</span></a></li>
+                    <li><a href="customers.html" class="flex items-center p-3 rounded-lg sidebar-item"><i class="fas fa-users w-6 text-center"></i><span class="ml-3">Khách Hàng</span></a></li>
+                    <li><a href="purchase.html" class="flex items-center p-3 rounded-lg sidebar-item"><i class="fas fa-dolly w-6 text-center"></i><span class="ml-3">Nhập Hàng</span></a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <header class="h-16 flex items-center justify-between px-6 bg-white border-b">
+                 <h2 id="page-title" class="text-2xl font-semibold text-gray-900">Lịch Sử Giao Dịch</h2>
+                <div class="flex space-x-2">
+                    <button id="export-all-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+                        <i class="fas fa-file-export mr-1"></i> Xuất Dữ Liệu
+                    </button>
+                    <button id="import-all-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+                        <i class="fas fa-file-import mr-1"></i> Nhập Dữ Liệu
+                    </button>
+                    <input type="file" id="import-all-input" class="hidden" accept=".xlsx">
+                </div>
+            </header>
+            
+            <div id="tab-content" class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 sm:p-6 lg:p-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    
+                    <div id="view-tabs" class="flex items-center space-x-1 border-b mb-4">
+                        <button data-view="sales" class="view-tab px-4 py-2 text-sm font-semibold border-b-2 border-blue-500 text-blue-600">Lịch Sử Bán Hàng</button>
+                        <button data-view="purchases" class="view-tab px-4 py-2 text-sm font-semibold border-transparent text-gray-500 hover:text-gray-700">Lịch Sử Nhập Hàng</button>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-4">
+                        <div id="sales-filters" class="flex items-center space-x-1 bg-gray-200 p-1 rounded-lg">
+                            <button data-filter="all" class="filter-btn px-3 py-1 text-sm font-semibold rounded-md bg-blue-500 text-white">Tất cả</button>
+                            <button data-filter="wholesale" class="filter-btn px-3 py-1 text-sm font-semibold rounded-md">Khách Sỉ</button>
+                            <button data-filter="retail" class="filter-btn px-3 py-1 text-sm font-semibold rounded-md">Khách Lẻ</button>
+                        </div>
+                        <div class="w-full sm:w-1/3">
+                            <input type="text" id="history-search-bar" placeholder="Tìm theo ID, tên khách hàng..." class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead id="history-table-head" class="uppercase bg-gray-50">
+                                </thead>
+                            <tbody id="history-table-body">
+                                </tbody>
+                        </table>
+                    </div>
+                     <div id="pagination-controls" class="flex justify-center items-center mt-4 space-x-2"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="order-detail-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <div class="flex justify-between items-center border-b pb-3 mb-4">
+                    <h3 class="text-xl leading-6 font-medium text-gray-900" id="detail-modal-title">Chi Tiết</h3>
+                    <button id="close-detail-modal-btn" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times fa-lg"></i>
+                    </button>
+                </div>
+                <div id="detail-modal-content"></div>
+                <div class="items-center px-4 py-3 mt-4 border-t text-right">
+                    <button id="print-order-btn" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-auto shadow-sm hover:bg-blue-600"><i class="fas fa-print mr-2"></i>In Phiếu</button>
+                    <button id="close-detail-modal-btn-footer" class="px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-auto shadow-sm hover:bg-gray-400 ml-2">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="print-invoice" class="hidden"></div>
+
+    <script src="db.js"></script>
+    <script src="history.js"></script>
+</body>
+</html>
