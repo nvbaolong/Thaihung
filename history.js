@@ -21,8 +21,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const salesFilters = document.getElementById('sales-filters');
     const viewTabs = document.getElementById('view-tabs');
     const paginationControls = document.getElementById('pagination-controls');
-    const sortByDateBtn = document.getElementById('sort-by-date');
-    const sortIcon = document.getElementById('sort-icon');
     
     // Modal elements
     const detailModal = document.getElementById('order-detail-modal');
@@ -31,13 +29,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const detailModalContent = document.getElementById('detail-modal-content');
     const detailModalTitle = document.getElementById('detail-modal-title');
     const printInvoiceContainer = document.getElementById('print-invoice');
+    
+    // Delete History Modal elements
+    const deleteHistoryBtn = document.getElementById('delete-history-btn');
+    const deleteHistoryModal = document.getElementById('delete-history-modal');
+    const deleteConfirmInput = document.getElementById('delete-confirm-input');
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
 
 
     // --- FORMATTING ---
     const formatCurrency = (value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value) || 0);
     const formatDateTime = (isoString) => new Date(isoString).toLocaleString('vi-VN');
 
-    // --- RENDER PAGINATION (Không đổi) ---
+    // --- RENDER PAGINATION ---
     const renderPagination = (totalItems) => {
         paginationControls.innerHTML = '';
         const totalPages = Math.ceil(totalItems / state.rowsPerPage);
@@ -50,14 +55,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (pageNumber && !isDisabled) {
                 button.onclick = () => {
                     state.currentPage = pageNumber;
-                    renderActiveView();
+                    if (state.activeView === 'sales') renderSalesHistory();
+                    else renderPurchaseHistory();
                 };
             }
             return button;
         };
 
         paginationControls.appendChild(createButton('&laquo;', state.currentPage - 1, state.currentPage === 1));
-        // Simple pagination for brevity
         for (let i = 1; i <= totalPages; i++) {
             paginationControls.appendChild(createButton(i, i, false, i === state.currentPage));
         }
@@ -136,21 +141,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         const paginated = filtered.slice((state.currentPage - 1) * state.rowsPerPage, state.currentPage * state.rowsPerPage);
 
         tableBody.innerHTML = paginated.map(p => `
-        <tr class="bg-white border-b hover:bg-gray-50">
-            <td class="px-6 py-4 font-medium">${p.id}</td>
-            <td class="px-6 py-4">${p.supplierName || 'N/A'}</td>
-            <td class="px-6 py-4">${formatDateTime(p.date)}</td>
-            <td class="px-6 py-4 font-semibold text-right">${formatCurrency(p.total)}</td>
-            
-            <td class="px-6 py-4 text-left whitespace-nowrap">
-                <button class="text-blue-500 hover:underline" onclick="app.viewPurchaseDetails('${p.id}')">Xem</button>
-                <button class="text-green-600 hover:underline ml-2" onclick="app.editPurchase('${p.id}')">Sửa</button>
-            </td>
-        </tr>
-    `).join('');
+            <tr class="bg-white border-b hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium">${p.id}</td>
+                <td class="px-6 py-4">${p.supplierName || 'N/A'}</td>
+                <td class="px-6 py-4">${formatDateTime(p.date)}</td>
+                <td class="px-6 py-4 font-semibold text-right">${formatCurrency(p.total)}</td>
+                <td class="px-6 py-4 text-left whitespace-nowrap">
+                    <button class="text-blue-500 hover:underline" onclick="app.viewPurchaseDetails('${p.id}')">Xem</button>
+                    <button class="text-green-600 hover:underline ml-2" onclick="app.editPurchase('${p.id}')">Sửa</button>
+                </td>
+            </tr>
+        `).join('');
 
-    renderPagination(filtered.length);
-};
+        renderPagination(filtered.length);
+    };
 
     // --- MAIN RENDER FUNCTION ---
     const renderActiveView = () => {
@@ -164,64 +168,51 @@ document.addEventListener('DOMContentLoaded', async () => {
             searchBar.placeholder = "Tìm theo ID, tên nhà cung cấp...";
             renderPurchaseHistory();
         }
-        // Re-attach sort listener since thead is re-rendered
-        document.getElementById('sort-by-date').addEventListener('click', () => {
-            state.sortDirection = state.sortDirection === 'desc' ? 'asc' : 'desc';
-            renderActiveView();
-        });
+        
+        const sortByDateBtn = document.getElementById('sort-by-date');
+        if (sortByDateBtn) {
+            sortByDateBtn.onclick = () => {
+                state.sortDirection = state.sortDirection === 'desc' ? 'asc' : 'desc';
+                if (state.activeView === 'sales') renderSalesHistory();
+                else renderPurchaseHistory();
+            };
+        }
     };
 
     // --- MODAL & GLOBAL APP ---
-    // Dán đoạn mã mới này để thay thế
-// THAY THẾ TOÀN BỘ KHỐI WINDOW.APP CŨ BẰNG KHỐI NÀY
-
-window.app = {
-    editOrder: (orderId) => { 
-        window.location.href = `index.html?edit=${orderId}`; 
-    },
-    // Thêm hàm mới để sửa phiếu nhập
-    editPurchase: (purchaseId) => {
-        window.location.href = `purchase.html?edit=${purchaseId}`;
-    },
-    viewOrderDetails: (orderId) => {
-        // ... (hàm này giữ nguyên như đã sửa ở lần trước)
-        const order = state.orders.find(o => o.id === orderId);
-        if (!order) return;
-        detailModalTitle.textContent = `Chi Tiết Đơn Hàng: ${order.id}`;
-        // ... (phần còn lại của hàm)
-        const printBtn = document.getElementById('print-order-btn');
-        const newPrintBtn = printBtn.cloneNode(true);
-        printBtn.parentNode.replaceChild(newPrintBtn, printBtn);
-        newPrintBtn.addEventListener('click', () => {
-            window.print();
-        });
-        detailModal.classList.remove('hidden');
-    },
-    viewPurchaseDetails: (purchaseId) => {
-        const purchase = state.purchases.find(p => p.id === purchaseId);
-        if (!purchase) return;
-        detailModalTitle.textContent = `Chi Tiết Phiếu Nhập: ${purchase.id}`;
-        const itemsHtml = purchase.items.map((item, index) => `
-            <tr class="border-b"><td class="p-2">${index + 1}</td><td class="p-2">${item.name}</td><td class="p-2 text-center">${item.quantity}</td><td class="p-2 text-right">${formatCurrency(item.importPrice)}</td><td class="p-2 text-right">${formatCurrency(item.importPrice * item.quantity)}</td></tr>
-        `).join('');
-        detailModalContent.innerHTML = `
-            <p><strong>Nhà cung cấp:</strong> ${purchase.supplierName}</p><p><strong>Ngày nhập:</strong> ${formatDateTime(purchase.date)}</p>
-            <table class="w-full mt-4"><thead class="uppercase bg-gray-100"><tr><th class="p-2">STT</th><th class="p-2">Tên hàng</th><th class="p-2 text-center">SL</th><th class="p-2 text-right">Giá nhập</th><th class="p-2 text-right">Thành tiền</th></tr></thead><tbody>${itemsHtml}</tbody></table>
-            <div class="mt-4 text-right font-bold">Tổng cộng: ${formatCurrency(purchase.total)}</div>
-        `;
-
-        // **** SỬA LỖI NÚT IN Ở ĐÂY ****
-        const printBtn = document.getElementById('print-order-btn');
-        const newPrintBtn = printBtn.cloneNode(true);
-        printBtn.parentNode.replaceChild(newPrintBtn, printBtn);
-        newPrintBtn.addEventListener('click', () => {
-            window.print();
-        });
-        // **********************************
-
-        detailModal.classList.remove('hidden');
-    },
-};
+    window.app = {
+        editOrder: (orderId) => { 
+            window.location.href = `index.html?edit=${orderId}`; 
+        },
+        editPurchase: (purchaseId) => {
+            window.location.href = `purchase.html?edit=${purchaseId}`;
+        },
+        viewOrderDetails: (orderId) => {
+            const order = state.orders.find(o => o.id === orderId);
+            if (!order) return;
+            detailModalTitle.textContent = `Chi Tiết Đơn Hàng: ${order.id}`;
+            const isWholesale = order.priceType === 'wholesale';
+            const itemsHtml = order.items.map((item, index) => `<tr class="border-b"><td class="p-2 text-center">${index + 1}</td><td class="p-2">${item.name}</td><td class="p-2 text-center">${item.quantity}</td><td class="p-2 text-right">${formatCurrency(item.price)}</td><td class="p-2 text-right">${formatCurrency(item.price * item.quantity)}</td></tr>`).join('');
+            detailModalContent.innerHTML = `<div class="grid grid-cols-2 gap-4 mb-4"><div><strong>Khách hàng:</strong> ${order.customerName || 'Khách Lẻ'}</div><div><strong>Ngày tạo:</strong> ${formatDateTime(order.date)}</div><div><strong>Loại giá:</strong> ${isWholesale ? 'Giá Sỉ' : 'Giá Lẻ'}</div></div><table class="w-full"><thead class="uppercase bg-gray-100"><tr><th class="p-2 text-center">STT</th><th class="p-2">Tên hàng</th><th class="p-2 text-center">SL</th><th class="p-2 text-right">Đơn giá</th><th class="p-2 text-right">Thành tiền</th></tr></thead><tbody>${itemsHtml}</tbody></table><div class="mt-4 pt-4 border-t text-right space-y-2 text-lg"><div class="flex justify-end"><span class="font-semibold w-32">Tổng cộng:</span><span class="font-bold w-40">${formatCurrency(order.total)}</span></div>${isWholesale ? `<div class="flex justify-end"><span class="font-semibold w-32">Đã trả:</span><span class="w-40">${formatCurrency(order.paidAmount)}</span></div><div class="flex justify-end text-red-600"><span class="font-semibold w-32">Còn nợ:</span><span class="font-bold w-40">${formatCurrency(order.debtAmount)}</span></div>` : ''}</div>`;
+            const printBtn = document.getElementById('print-order-btn');
+            const newPrintBtn = printBtn.cloneNode(true);
+            printBtn.parentNode.replaceChild(newPrintBtn, printBtn);
+            newPrintBtn.addEventListener('click', () => { window.print(); });
+            detailModal.classList.remove('hidden');
+        },
+        viewPurchaseDetails: (purchaseId) => {
+            const purchase = state.purchases.find(p => p.id === purchaseId);
+            if (!purchase) return;
+            detailModalTitle.textContent = `Chi Tiết Phiếu Nhập: ${purchase.id}`;
+            const itemsHtml = purchase.items.map((item, index) => `<tr class="border-b"><td class="p-2">${index + 1}</td><td class="p-2">${item.name}</td><td class="p-2 text-center">${item.quantity}</td><td class="p-2 text-right">${formatCurrency(item.importPrice)}</td><td class="p-2 text-right">${formatCurrency(item.importPrice * item.quantity)}</td></tr>`).join('');
+            detailModalContent.innerHTML = `<p><strong>Nhà cung cấp:</strong> ${purchase.supplierName}</p><p><strong>Ngày nhập:</strong> ${formatDateTime(purchase.date)}</p><table class="w-full mt-4"><thead class="uppercase bg-gray-100"><tr><th class="p-2">STT</th><th class="p-2">Tên hàng</th><th class="p-2 text-center">SL</th><th class="p-2 text-right">Giá nhập</th><th class="p-2 text-right">Thành tiền</th></tr></thead><tbody>${itemsHtml}</tbody></table><div class="mt-4 text-right font-bold">Tổng cộng: ${formatCurrency(purchase.total)}</div>`;
+            const printBtn = document.getElementById('print-order-btn');
+            const newPrintBtn = printBtn.cloneNode(true);
+            printBtn.parentNode.replaceChild(newPrintBtn, printBtn);
+            newPrintBtn.addEventListener('click', () => { window.print(); });
+            detailModal.classList.remove('hidden');
+        },
+    };
     
     // --- INITIALIZATION ---
     const init = async () => {
@@ -259,6 +250,42 @@ window.app = {
 
         closeDetailModalBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
         closeDetailModalBtnFooter.addEventListener('click', () => detailModal.classList.add('hidden'));
+
+        // --- Logic cho việc xóa lịch sử ---
+        deleteHistoryBtn.addEventListener('click', () => {
+            deleteHistoryModal.classList.remove('hidden');
+        });
+
+        cancelDeleteBtn.addEventListener('click', () => {
+            deleteHistoryModal.classList.add('hidden');
+            deleteConfirmInput.value = '';
+            confirmDeleteBtn.disabled = true;
+        });
+
+        deleteConfirmInput.addEventListener('input', (e) => {
+            if (e.target.value.toLowerCase() === 'delete') {
+                confirmDeleteBtn.disabled = false;
+            } else {
+                confirmDeleteBtn.disabled = true;
+            }
+        });
+
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (deleteConfirmInput.value.toLowerCase() !== 'delete') return;
+
+            try {
+                await db.overwriteStore(db.STORES.orders, []);
+                await db.overwriteStore(db.STORES.purchases, []);
+                state.orders = [];
+                state.purchases = [];
+                renderActiveView();
+                cancelDeleteBtn.click();
+                alert('Đã xóa toàn bộ lịch sử giao dịch thành công!');
+            } catch (error) {
+                console.error("Lỗi khi xóa lịch sử:", error);
+                alert('Đã có lỗi xảy ra khi xóa lịch sử.');
+            }
+        });
 
         renderActiveView(); // Render lần đầu
     };
