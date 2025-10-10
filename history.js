@@ -242,11 +242,63 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         
         searchBar.addEventListener('input', (e) => {
-            state.searchQuery = e.target.value;
-            state.currentPage = 1;
-            if (state.activeView === 'sales') renderSalesHistory();
-            else renderPurchaseHistory();
-        });
+    state.searchQuery = e.target.value.trim().toLowerCase();
+    state.currentPage = 1;
+
+    const query = state.searchQuery;
+    const keywords = query.split(/\s+/).filter(Boolean);
+    const priceMatch = query.match(/[<>]=?\s*\d+/);
+    const dateMatch = query.match(/\d{4}-\d{2}-\d{2}/); // định dạng YYYY-MM-DD
+
+    const applyAdvancedSearch = (list, type) => {
+        let results = list;
+
+        // --- Tìm theo nhiều từ khóa ---
+        if (keywords.length) {
+            results = results.filter((item) => {
+                const text = removeDiacritics(
+                    `${item.id} ${item.customerName || item.supplierName || ''}`.toLowerCase()
+                );
+                return keywords.every((kw) => text.includes(removeDiacritics(kw)));
+            });
+        }
+
+        // --- Tìm theo giá trị tổng ---
+        if (priceMatch) {
+            const expr = priceMatch[0].replace(/\s/g, '');
+            const num = parseFloat(expr.match(/\d+/)?.[0] || 0);
+            if (expr.startsWith('<')) results = results.filter((x) => x.total < num);
+            else if (expr.startsWith('>')) results = results.filter((x) => x.total > num);
+            else if (expr.startsWith('=')) results = results.filter((x) => x.total === num);
+        }
+
+        // --- Tìm theo ngày ---
+        if (dateMatch) {
+            const dateStr = dateMatch[0];
+            results = results.filter((x) => x.date && x.date.includes(dateStr));
+        }
+
+        return results;
+    };
+
+    // --- Áp dụng lọc ---
+    if (state.activeView === 'sales') {
+        let filtered = applyAdvancedSearch(state.orders, 'sales');
+        // lọc sỉ/lẻ
+        if (state.salesFilterType !== 'all') {
+            filtered = filtered.filter((order) =>
+                state.salesFilterType === 'wholesale'
+                    ? order.priceType === 'wholesale'
+                    : order.priceType === 'retail'
+            );
+        }
+        renderSalesHistoryCustom(filtered);
+    } else {
+        const filtered = applyAdvancedSearch(state.purchases, 'purchases');
+        renderPurchaseHistoryCustom(filtered);
+    }
+});
+
 
         closeDetailModalBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
         closeDetailModalBtnFooter.addEventListener('click', () => detailModal.classList.add('hidden'));
@@ -289,6 +341,55 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         renderActiveView(); // Render lần đầu
     };
+// --- Render lịch sử bán hàng với danh sách tuỳ chỉnh ---
+function renderSalesHistoryCustom(customList) {
+    const filtered = customList || state.orders;
+    const sorted = filtered.sort((a, b) =>
+        state.sortDirection === 'asc'
+            ? new Date(a.date) - new Date(b.date)
+            : new Date(b.date) - new Date(a.date)
+    );
+    tableBody.innerHTML = sorted
+        .slice((state.currentPage - 1) * state.rowsPerPage, state.currentPage * state.rowsPerPage)
+        .map(order => `
+            <tr class="bg-white border-b hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium">${order.id}</td>
+                <td class="px-6 py-4">${order.customerName || 'Khách Lẻ'}</td>
+                <td class="px-6 py-4">${new Date(order.date).toLocaleString('vi-VN')}</td>
+                <td class="px-6 py-4 text-right">${formatCurrency(order.total)}</td>
+                <td class="px-6 py-4 text-right">${formatCurrency(order.paidAmount)}</td>
+                <td class="px-6 py-4 text-right text-red-600">${formatCurrency(order.debtAmount)}</td>
+                <td class="px-6 py-4">
+                    <button class="text-blue-500 hover:underline" onclick="app.viewOrderDetails('${order.id}')">Xem</button>
+                    <button class="text-green-600 hover:underline ml-2" onclick="app.editOrder('${order.id}')">Sửa</button>
+                </td>
+            </tr>
+        `).join('');
+}
+
+// --- Render lịch sử nhập hàng với danh sách tuỳ chỉnh ---
+function renderPurchaseHistoryCustom(customList) {
+    const filtered = customList || state.purchases;
+    const sorted = filtered.sort((a, b) =>
+        state.sortDirection === 'asc'
+            ? new Date(a.date) - new Date(b.date)
+            : new Date(b.date) - new Date(a.date)
+    );
+    tableBody.innerHTML = sorted
+        .slice((state.currentPage - 1) * state.rowsPerPage, state.currentPage * state.rowsPerPage)
+        .map(p => `
+            <tr class="bg-white border-b hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium">${p.id}</td>
+                <td class="px-6 py-4">${p.supplierName || 'N/A'}</td>
+                <td class="px-6 py-4">${new Date(p.date).toLocaleString('vi-VN')}</td>
+                <td class="px-6 py-4 text-right">${formatCurrency(p.total)}</td>
+                <td class="px-6 py-4">
+                    <button class="text-blue-500 hover:underline" onclick="app.viewPurchaseDetails('${p.id}')">Xem</button>
+                    <button class="text-green-600 hover:underline ml-2" onclick="app.editPurchase('${p.id}')">Sửa</button>
+                </td>
+            </tr>
+        `).join('');
+}
 
     init();
 });

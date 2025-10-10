@@ -62,8 +62,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- Render bảng ---
   const renderTable = () => {
-    const query = searchBar.value.toLowerCase();
-    const filtered = products.filter((p) => p.name.toLowerCase().includes(query));
+   const query = searchBar.value;
+const filtered = advancedFilter(query, products);
     const start = (currentPage - 1) * rowsPerPage;
     const end = start + rowsPerPage;
     const pageData = filtered.slice(start, end);
@@ -157,10 +157,65 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   cancelBtn.onclick = closeModal;
   addBtn.onclick = () => openModal();
-  searchBar.oninput = () => {
-    currentPage = 1;
-    renderTable();
-  };
+  searchBar.addEventListener('input', () => {
+  currentPage = 1;
+  renderTable();
+});
+
+// 🧩 Hỗ trợ tìm kiếm nâng cao
+const advancedFilter = (query, data) => {
+  const raw = query.trim().toLowerCase();
+  if (!raw) return data;
+
+  const removeDiacritics = (str) =>
+    str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+
+  const q = removeDiacritics(raw);
+  const keywords = q.split(/\s+/).filter(Boolean);
+
+  // --- Tìm theo giá ---
+  const priceMatch = q.match(/[<>]=?\s*\d+/);
+  let results = data;
+
+  // --- Tìm theo từ khóa ---
+  results = results.filter((p) => {
+    const combined = removeDiacritics(
+      `${p.id} ${p.name} ${p.unit || ''}`.toLowerCase()
+    );
+    return keywords.every((kw) => combined.includes(kw));
+  });
+
+  // --- Lọc theo giá nhập, sỉ, lẻ ---
+  if (priceMatch) {
+    const expr = priceMatch[0].replace(/\s/g, '');
+    const num = parseFloat(expr.match(/\d+/)?.[0] || 0);
+    if (expr.startsWith('<')) {
+      results = results.filter(
+        (p) =>
+          p.importPrice < num ||
+          p.wholesalePrice < num ||
+          p.retailPrice < num
+      );
+    } else if (expr.startsWith('>')) {
+      results = results.filter(
+        (p) =>
+          p.importPrice > num ||
+          p.wholesalePrice > num ||
+          p.retailPrice > num
+      );
+    } else if (expr.startsWith('=')) {
+      results = results.filter(
+        (p) =>
+          p.importPrice === num ||
+          p.wholesalePrice === num ||
+          p.retailPrice === num
+      );
+    }
+  }
+
+  return results;
+};
+
 
   // --- Nhập Excel ---
   importBtn.onclick = () => importInput.click();
