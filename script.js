@@ -736,7 +736,6 @@ saveQuickCustomerBtn.addEventListener('click', async () => {
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div><strong>Khách hàng:</strong> ${order.customerName || 'Khách Lẻ'}</div>
                     <div><strong>Ngày tạo:</strong> ${new Date(order.date).toLocaleString('vi-VN')}</div>
-                    <div><strong>Loại giá:</strong> ${isWholesale ? 'Giá Sỉ' : 'Giá Lẻ'}</div>
                 </div>
                 <table class="w-full">
                     <thead class="uppercase bg-gray-100">
