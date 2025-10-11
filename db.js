@@ -156,7 +156,9 @@
         
         getAllSuppliers: () => getAll(STORES.suppliers),
         addSupplier: (supplier) => add(STORES.suppliers, supplier),
-        
+        updateSupplier: (supplier) => update(STORES.suppliers, supplier),
+        deleteSupplier: (id) => remove(STORES.suppliers, id),
+
         overwriteStore: overwriteStore,
     };
 })();

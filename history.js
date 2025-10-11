@@ -407,6 +407,110 @@ function renderPurchaseHistoryCustom(customList) {
             </tr>
         `).join('');
 }
+// File: history.js
 
-    init();
+// DÁN TOÀN BỘ ĐOẠN CODE NÀY VÀO TRƯỚC DÒNG init(); Ở CUỐI TỆP
+
+// --- Logic xuất/nhập dữ liệu ---
+const exportAllBtn = document.getElementById('export-all-btn');
+const importAllBtn = document.getElementById('import-all-btn');
+const importAllInput = document.getElementById('import-all-input');
+
+const exportAllData = async () => {
+    try {
+        alert('Đang chuẩn bị dữ liệu để xuất, vui lòng chờ...');
+        const products = await db.getAllProducts();
+        const orders = await db.getAllOrders();
+        const customers = await db.getAllCustomers();
+        const purchases = await db.getAllPurchases();
+        const suppliers = await db.getAllSuppliers();
+
+        if (products.length === 0 && orders.length === 0 && customers.length === 0 && purchases.length === 0 && suppliers.length === 0) {
+            alert('Chưa có dữ liệu để xuất.');
+            return;
+        }
+
+        const wb = XLSX.utils.book_new();
+        const wsProducts = XLSX.utils.json_to_sheet(products);
+        const wsOrders = XLSX.utils.json_to_sheet(orders);
+        const wsCustomers = XLSX.utils.json_to_sheet(customers);
+        const wsPurchases = XLSX.utils.json_to_sheet(purchases);
+        const wsSuppliers = XLSX.utils.json_to_sheet(suppliers);
+
+        XLSX.utils.book_append_sheet(wb, wsProducts, "Products");
+        XLSX.utils.book_append_sheet(wb, wsOrders, "Orders");
+        XLSX.utils.book_append_sheet(wb, wsCustomers, "Customers");
+        XLSX.utils.book_append_sheet(wb, wsPurchases, "Purchases");
+        XLSX.utils.book_append_sheet(wb, wsSuppliers, "Suppliers");
+
+        const today = new Date().toISOString().split('T')[0];
+        const filename = `SalesDashboard_Backup_${today}.xlsx`;
+        XLSX.writeFile(wb, filename);
+        alert('Đã xuất toàn bộ dữ liệu thành công!');
+    } catch(error) {
+        console.error("Lỗi khi xuất dữ liệu:", error);
+        alert("Đã xảy ra lỗi trong quá trình xuất dữ liệu.");
+    }
+};
+
+const importAllData = (file) => {
+    if (!confirm('CẢNH BÁO: Thao tác này sẽ XÓA TOÀN BỘ dữ liệu hiện tại và thay thế bằng dữ liệu từ tệp Excel. Bạn có chắc chắn muốn tiếp tục?')) {
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+
+            const productsSheet = workbook.Sheets["Products"];
+            const ordersSheet = workbook.Sheets["Orders"];
+            const customersSheet = workbook.Sheets["Customers"];
+            const purchasesSheet = workbook.Sheets["Purchases"];
+            const suppliersSheet = workbook.Sheets["Suppliers"];
+
+            if (!productsSheet || !ordersSheet || !customersSheet || !purchasesSheet || !suppliersSheet) {
+                alert("File không hợp lệ. Hãy đảm bảo có đủ 5 sheet: Products, Orders, Customers, Purchases, và Suppliers.");
+                return;
+            }
+
+            const products = XLSX.utils.sheet_to_json(productsSheet);
+            const orders = XLSX.utils.sheet_to_json(ordersSheet);
+            const customers = XLSX.utils.sheet_to_json(customersSheet);
+            const purchases = XLSX.utils.sheet_to_json(purchasesSheet);
+            const suppliers = XLSX.utils.sheet_to_json(suppliersSheet);
+
+            await db.overwriteStore(db.STORES.products, products);
+            await db.overwriteStore(db.STORES.orders, orders);
+            await db.overwriteStore(db.STORES.customers, customers);
+            await db.overwriteStore(db.STORES.purchases, purchases);
+            await db.overwriteStore(db.STORES.suppliers, suppliers);
+            
+            localStorage.removeItem('salesDashboardUiState');
+            localStorage.removeItem('purchaseDashboardUiState');
+
+            alert('Đã nhập dữ liệu thành công! Trang sẽ được tải lại.');
+            location.reload();
+
+        } catch(error) {
+            console.error("Lỗi khi nhập dữ liệu:", error);
+            alert("Đã xảy ra lỗi trong quá trình nhập dữ liệu. Vui lòng kiểm tra lại định dạng file.");
+        }
+    };
+    reader.readAsArrayBuffer(file);
+    importAllInput.value = '';
+};
+
+if (exportAllBtn) exportAllBtn.addEventListener('click', exportAllData);
+if (importAllBtn && importAllInput) {
+    importAllBtn.addEventListener('click', () => importAllInput.click());
+    importAllInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) importAllData(file);
+    });
+}
+// ---------------------------------------------------------------- //
+
+init(); // Dòng này đã có sẵn ở cuối tệp, bạn chỉ cần dán code vào trước nó.
 });

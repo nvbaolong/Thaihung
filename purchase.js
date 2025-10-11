@@ -1,35 +1,22 @@
 document.addEventListener('DOMContentLoaded', async () => {
     await db.init();
-// --- KIỂM TRA CÓ PHIẾU NHẬP CẦN CHỈNH SỬA KHÔNG ---
-const editPurchaseId = sessionStorage.getItem('editPurchaseId');
-if (editPurchaseId) {
-  const purchaseToEdit = await db.getPurchaseById(editPurchaseId);
-  if (purchaseToEdit) {
-    state.currentPurchase = {
-      id: purchaseToEdit.id,
-      supplierName: purchaseToEdit.supplierName,
-      items: structuredClone(purchaseToEdit.items),
-      total: purchaseToEdit.total,
-      paidAmount: purchaseToEdit.paidAmount,
-      debtAmount: purchaseToEdit.debtAmount,
-      originalPurchaseId: purchaseToEdit.id,
-    };
-    renderCurrentPurchaseUI();
-    alert(`🧾 Đang chỉnh sửa phiếu nhập: ${purchaseToEdit.id}`);
-  }
-  sessionStorage.removeItem('editPurchaseId');
-}
 
     let state = {
         products: [],
         suppliers: [],
-        allPurchases: [], // <-- THÊM DÒNG NÀY    
-        purchaseTabs: [], // Quản lý nhiều tab
+        allPurchases: [],
+        purchaseTabs: [],
         activePurchaseId: 1,
         nextPurchaseId: 2,
+        supplierListSearchQuery: '',
     };
 
     // --- DOM ELEMENTS ---
+    const supplierPageOverlay = document.getElementById('supplier-page-overlay');
+    const showSupplierListBtn = document.getElementById('show-supplier-list-btn');
+    const backToPurchaseBtn = document.getElementById('back-to-purchase-btn');
+
+    // Purchase creation elements
     const productSearchInput = document.getElementById('product-search');
     const autocompleteResultsContainer = document.getElementById('autocomplete-results');
     const currentPurchaseItemsContainer = document.getElementById('current-purchase-items');
@@ -40,13 +27,26 @@ if (editPurchaseId) {
     const summaryItemCountEl = document.getElementById('summary-item-count');
     const purchaseTabsContainer = document.getElementById('purchase-tabs-container');
     const newPurchaseBtn = document.getElementById('new-purchase-btn');
-    
+
     // Quick Add Supplier Modal
     const quickSupplierModal = document.getElementById('quick-supplier-modal');
     const quickAddSupplierBtn = document.getElementById('quick-add-supplier-btn');
     const closeQuickSupplierModalBtn = document.getElementById('close-quick-supplier-modal-btn');
     const saveQuickSupplierBtn = document.getElementById('save-quick-supplier-btn');
     const quickSupplierNameInput = document.getElementById('quick-supplier-name');
+    
+    // Supplier list elements
+    const supplierListTableBody = document.getElementById('supplier-list-table-body');
+    const supplierListSearchBar = document.getElementById('supplier-list-search-bar');
+    const addNewSupplierBtn = document.getElementById('add-new-supplier-btn');
+
+    // Supplier edit modal elements
+    const supplierEditModal = document.getElementById('supplier-edit-modal');
+    const supplierEditModalTitle = document.getElementById('supplier-edit-modal-title');
+    const supplierEditIdHidden = document.getElementById('supplier-edit-id-hidden');
+    const supplierEditNameInput = document.getElementById('supplier-edit-name');
+    const saveSupplierEditBtn = document.getElementById('save-supplier-edit-btn');
+    const closeSupplierEditModalBtn = document.getElementById('close-supplier-edit-modal-btn');
 
     // --- DATA HANDLING & STATE ---
     const saveUiState = () => {
@@ -61,19 +61,19 @@ if (editPurchaseId) {
     const loadData = async () => {
         state.products = await db.getAllProducts();
         state.suppliers = await db.getAllSuppliers();
-        state.allPurchases = await db.getAllPurchases(); // <-- THÊM DÒNG NÀY    
+        state.allPurchases = await db.getAllPurchases();
         
         const uiStateData = localStorage.getItem('purchaseDashboardUiState');
         if (uiStateData) {
             const parsed = JSON.parse(uiStateData);
-            state.purchaseTabs = parsed.purchaseTabs.length > 0 ? parsed.purchaseTabs : [{ id: 1, items: [], supplierName: '', total: 0 }];
+            state.purchaseTabs = parsed.purchaseTabs && parsed.purchaseTabs.length > 0 ? parsed.purchaseTabs : [{ id: 1, items: [], supplierName: '', total: 0, originalPurchaseId: null }];
             state.nextPurchaseId = parsed.nextPurchaseId || 2;
             state.activePurchaseId = parsed.activePurchaseId || 1;
         } else {
-            state.purchaseTabs = [{ id: 1, items: [], supplierName: '', total: 0 }];
+            state.purchaseTabs = [{ id: 1, items: [], supplierName: '', total: 0, originalPurchaseId: null }];
         }
     };
-    
+
     const getActivePurchase = () => state.purchaseTabs.find(p => p.id === state.activePurchaseId);
     
     // --- FORMATTING ---
@@ -83,12 +83,9 @@ if (editPurchaseId) {
     const updatePurchaseSummary = () => {
         const activePurchase = getActivePurchase();
         if (!activePurchase) return;
-
         const total = activePurchase.items.reduce((sum, item) => sum + (item.importPrice * item.quantity), 0);
         const itemCount = activePurchase.items.length;
-        
         activePurchase.total = total;
-        
         summaryTotalEl.textContent = formatNumber(total);
         summaryItemCountEl.textContent = itemCount;
         savePurchaseBtn.disabled = itemCount === 0;
@@ -104,7 +101,6 @@ if (editPurchaseId) {
             table.className = 'w-full text-left text-sm';
             table.innerHTML = `<thead class="uppercase bg-gray-50 text-xs"><tr><th class="px-2 py-2">Tên hàng</th><th class="px-2 py-2 text-center">SL</th><th class="px-2 py-2 text-right">Giá nhập</th><th class="px-2 py-2 text-right">Thành tiền</th><th class="px-2 py-2 text-center">Xóa</th></tr></thead><tbody></tbody>`;
             const tbody = table.querySelector('tbody');
-
             activePurchase.items.forEach(item => {
                 const row = document.createElement('tr');
                 row.className = 'bg-white border-b';
@@ -123,47 +119,37 @@ if (editPurchaseId) {
         updatePurchaseSummary();
     };
     
-    // File: purchase.js
-
-const renderPurchaseTabs = () => {
-    Array.from(purchaseTabsContainer.children).forEach(child => {
-        if (child.id !== 'new-purchase-btn') purchaseTabsContainer.removeChild(child);
-    });
-
-    state.purchaseTabs.forEach((purchase, index) => {
-        const tabButton = document.createElement('button');
-        tabButton.className = `px-4 py-2 text-sm font-medium border-r border-gray-200 ${purchase.id === state.activePurchaseId ? 'bg-white text-blue-600' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`;
-        
-        // THAY ĐỔI LOGIC HIỂN THỊ TÊN TAB
-        const tabName = purchase.originalPurchaseId 
-            ? `Sửa PN ${purchase.originalPurchaseId.slice(-4)}` 
-            : `Phiếu ${index + 1}`;
-        tabButton.textContent = tabName;
-        tabButton.dataset.id = purchase.id;
-
-        tabButton.addEventListener('click', () => {
-            state.activePurchaseId = purchase.id;
-            renderActivePurchaseUI();
+    const renderPurchaseTabs = () => {
+        Array.from(purchaseTabsContainer.children).forEach(child => {
+            if (child.id !== 'new-purchase-btn') purchaseTabsContainer.removeChild(child);
         });
-
-        if (state.purchaseTabs.length > 1) {
-            const closeBtn = document.createElement('span');
-            closeBtn.innerHTML = '&times;';
-            closeBtn.className = 'ml-2 px-1 rounded-full hover:bg-red-200 text-red-500 font-bold';
-            closeBtn.onclick = (e) => {
-                e.stopPropagation();
-                closePurchaseTab(purchase.id);
-            };
-            tabButton.appendChild(closeBtn);
-        }
-        purchaseTabsContainer.insertBefore(tabButton, newPurchaseBtn);
-    });
-};
+        state.purchaseTabs.forEach((purchase, index) => {
+            const tabButton = document.createElement('button');
+            tabButton.className = `px-4 py-2 text-sm font-medium border-r border-gray-200 ${purchase.id === state.activePurchaseId ? 'bg-white text-blue-600' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`;
+            const tabName = purchase.originalPurchaseId ? `Sửa PN ${purchase.originalPurchaseId.slice(-4)}` : `Phiếu ${index + 1}`;
+            tabButton.textContent = tabName;
+            tabButton.dataset.id = purchase.id;
+            tabButton.addEventListener('click', () => {
+                state.activePurchaseId = purchase.id;
+                renderActivePurchaseUI();
+            });
+            if (state.purchaseTabs.length > 1) {
+                const closeBtn = document.createElement('span');
+                closeBtn.innerHTML = '&times;';
+                closeBtn.className = 'ml-2 px-1 rounded-full hover:bg-red-200 text-red-500 font-bold';
+                closeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    closePurchaseTab(purchase.id);
+                };
+                tabButton.appendChild(closeBtn);
+            }
+            purchaseTabsContainer.insertBefore(tabButton, newPurchaseBtn);
+        });
+    };
     
     const renderActivePurchaseUI = () => {
         const activePurchase = getActivePurchase();
         if (!activePurchase) return;
-
         supplierNameSearchInput.value = activePurchase.supplierName;
         renderPurchaseTabs();
         renderCurrentPurchaseItems();
@@ -186,9 +172,8 @@ const renderPurchaseTabs = () => {
     const closePurchaseTab = (purchaseId) => {
         const index = state.purchaseTabs.findIndex(p => p.id === purchaseId);
         if (index > -1) state.purchaseTabs.splice(index, 1);
-        
         if (state.purchaseTabs.length === 0) {
-            const newPurchase = { id: state.nextPurchaseId++, items: [], supplierName: '', total: 0 };
+            const newPurchase = { id: state.nextPurchaseId++, items: [], supplierName: '', total: 0, originalPurchaseId: null };
             state.purchaseTabs.push(newPurchase);
             state.activePurchaseId = newPurchase.id;
         } else if (state.activePurchaseId === purchaseId) {
@@ -197,6 +182,42 @@ const renderPurchaseTabs = () => {
         renderActivePurchaseUI();
     };
 
+    const renderSupplierListTable = () => {
+        let filteredSuppliers = state.suppliers;
+        const query = state.supplierListSearchQuery.toLowerCase().trim();
+        if (query) {
+            const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+            const normalizedQuery = removeDiacritics(query);
+            filteredSuppliers = state.suppliers.filter(s => removeDiacritics(s.name.toLowerCase()).includes(normalizedQuery));
+        }
+        supplierListTableBody.innerHTML = filteredSuppliers.map(s => `
+            <tr class="bg-white border-b hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium">${s.id}</td>
+                <td class="px-6 py-4">${s.name}</td>
+                <td class="px-6 py-4 text-center space-x-4">
+                    <button class="text-blue-600 hover:underline font-medium" onclick="app.editSupplier('${s.id}')">Chỉnh sửa</button>
+                    <button class="text-red-600 hover:underline font-medium" onclick="app.deleteSupplier('${s.id}')">Xóa</button>
+                </td>
+            </tr>
+        `).join('') || `<tr><td colspan="3" class="text-center py-4">Không tìm thấy nhà cung cấp.</td></tr>`;
+    };
+
+    const openSupplierEditModal = (supplier = null) => {
+        document.getElementById('supplier-edit-form').reset();
+        if (supplier) {
+            supplierEditModalTitle.textContent = 'Chỉnh Sửa Nhà Cung Cấp';
+            supplierEditIdHidden.value = supplier.id;
+            supplierEditNameInput.value = supplier.name;
+        } else {
+            supplierEditModalTitle.textContent = 'Thêm Nhà Cung Cấp Mới';
+            supplierEditIdHidden.value = '';
+        }
+        supplierEditModal.classList.remove('hidden');
+        supplierEditNameInput.focus();
+    };
+
+    const closeSupplierEditModal = () => supplierEditModal.classList.add('hidden');
+
     // --- LOGIC & EVENT HANDLERS ---
     window.app = {
         addToPurchase: (productId) => {
@@ -204,7 +225,6 @@ const renderPurchaseTabs = () => {
             if (!activePurchase) return;
             const product = state.products.find(p => p.id === productId);
             if (!product) return;
-            
             const existingItem = activePurchase.items.find(item => item.id === productId);
             if (existingItem) existingItem.quantity++;
             else {
@@ -221,102 +241,128 @@ const renderPurchaseTabs = () => {
             activePurchase.items = activePurchase.items.filter(item => item.id !== productId);
             renderCurrentPurchaseItems();
         },
+        editSupplier: (supplierId) => {
+            const supplier = state.suppliers.find(s => s.id === supplierId);
+            if (supplier) openSupplierEditModal(supplier);
+        },
+        deleteSupplier: async (supplierId) => {
+            if (confirm('Bạn có chắc chắn muốn xóa nhà cung cấp này?')) {
+                await db.deleteSupplier(supplierId);
+                state.suppliers = await db.getAllSuppliers();
+                renderSupplierListTable();
+                alert('Đã xóa nhà cung cấp.');
+            }
+        },
     };
     
+    // View Toggling Logic
+    showSupplierListBtn.addEventListener('click', () => {
+        supplierPageOverlay.classList.remove('hidden');
+        renderSupplierListTable();
+    });
+
+    backToPurchaseBtn.addEventListener('click', () => {
+        supplierPageOverlay.classList.add('hidden');
+    });
+
+    // Supplier List Event Listeners
+    supplierListSearchBar.addEventListener('input', (e) => {
+        state.supplierListSearchQuery = e.target.value;
+        renderSupplierListTable();
+    });
+
+    addNewSupplierBtn.addEventListener('click', () => openSupplierEditModal());
+    closeSupplierEditModalBtn.addEventListener('click', closeSupplierEditModal);
+
+    saveSupplierEditBtn.addEventListener('click', async () => {
+        const id = supplierEditIdHidden.value;
+        const name = supplierEditNameInput.value.trim();
+        if (!name) return alert('Tên NCC không được để trống.');
+        const isDuplicate = state.suppliers.some(s => s.name.toLowerCase() === name.toLowerCase() && s.id !== id);
+        if (isDuplicate) return alert(`Tên NCC "${name}" đã tồn tại.`);
+        if (id) {
+            const supplierToUpdate = state.suppliers.find(s => s.id === id);
+            if (supplierToUpdate) {
+                supplierToUpdate.name = name;
+                await db.updateSupplier(supplierToUpdate);
+            }
+        } else {
+            const newSupplier = { id: `NCC-${Date.now()}`, name };
+            await db.addSupplier(newSupplier);
+        }
+        state.suppliers = await db.getAllSuppliers();
+        renderSupplierListTable();
+        closeSupplierEditModal();
+    });
+
+    // Purchase Creation Event Listeners
     newPurchaseBtn.addEventListener('click', () => {
-        const newPurchase = { id: state.nextPurchaseId++, items: [], supplierName: '', total: 0 };
+        const newPurchase = { id: state.nextPurchaseId++, items: [], supplierName: '', total: 0, originalPurchaseId: null };
         state.purchaseTabs.push(newPurchase);
         state.activePurchaseId = newPurchase.id;
         renderActivePurchaseUI();
     });
 
-    // --- TÌM KIẾM NÂNG CAO CHO SẢN PHẨM NHẬP HÀNG ---
-productSearchInput.addEventListener('input', (e) => {
-    const rawQuery = e.target.value.trim();
-    const query = rawQuery.toLowerCase();
-
-    if (!query) {
-        autocompleteResultsContainer.classList.add('hidden');
-        return;
-    }
-
-    const removeDiacritics = (str) =>
-        str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
-
-    const normalizedQuery = removeDiacritics(query);
-    const keywords = normalizedQuery.split(/\s+/).filter(Boolean);
-    let results = state.products;
-
-    // --- Lọc theo nhiều từ khóa ---
-    results = results.filter(p => {
-        const normalizedName = removeDiacritics(p.name.toLowerCase());
-        const unit = (p.unit || '').toLowerCase();
-        return keywords.every(kw =>
-            normalizedName.includes(kw) ||
-            String(p.id).toLowerCase().includes(kw) ||
-            unit.includes(kw)
-        );
-    });
-
-    // --- Lọc theo giá nhập ---
-    const priceMatch = rawQuery.match(/[<>]=?\s*\d+/);
-    if (priceMatch) {
-        const expr = priceMatch[0].replace(/\s/g, '');
-        const num = parseFloat(expr.match(/\d+/)?.[0] || 0);
-        if (expr.startsWith('<')) {
-            results = results.filter(p => p.importPrice < num);
-        } else if (expr.startsWith('>')) {
-            results = results.filter(p => p.importPrice > num);
-        } else if (expr.startsWith('=')) {
-            results = results.filter(p => p.importPrice === num);
+    productSearchInput.addEventListener('input', (e) => {
+        const rawQuery = e.target.value.trim();
+        if (!rawQuery) {
+            autocompleteResultsContainer.classList.add('hidden');
+            return;
         }
-    }
-
-    // --- Hiển thị kết quả ---
-    const topResults = results.slice(0, 15);
-    autocompleteResultsContainer.innerHTML = topResults.map(p => `
-        <div class="p-2 hover:bg-blue-50 cursor-pointer border-b last:border-0" data-id="${p.id}">
-            <div class="font-semibold">${p.name} <span class="text-sm text-gray-500">(${p.unit || ''})</span></div>
-            <div class="flex justify-between text-sm text-gray-700">
-                <span>Mã: ${p.id}</span>
-                <span>Giá nhập: <span class="text-blue-600 font-semibold">${new Intl.NumberFormat('vi-VN').format(p.importPrice)}đ</span></span>
-            </div>
-        </div>
-    `).join('');
-
-    autocompleteResultsContainer.classList.remove('hidden');
-
-    // --- Khi click chọn ---
-    autocompleteResultsContainer.querySelectorAll('[data-id]').forEach(el => {
-        el.addEventListener('click', () => {
-            app.addToPurchase(el.dataset.id);
+        const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+        const normalizedQuery = removeDiacritics(rawQuery.toLowerCase());
+        const keywords = normalizedQuery.split(/\s+/).filter(Boolean);
+        const results = state.products.filter(p => {
+            const normalizedName = removeDiacritics(p.name.toLowerCase());
+            return keywords.every(kw => normalizedName.includes(kw) || String(p.id).toLowerCase().includes(kw));
+        });
+        renderAutocompleteResults(results.slice(0, 10), autocompleteResultsContainer, (product) => {
+            app.addToPurchase(product.id);
             productSearchInput.value = '';
             autocompleteResultsContainer.classList.add('hidden');
         });
+        autocompleteResultsContainer.classList.remove('hidden');
     });
-});
 
-
-    supplierNameSearchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
+    const selectSupplier = (supplier) => {
         const activePurchase = getActivePurchase();
-        if(activePurchase) activePurchase.supplierName = query;
-        saveUiState();
-        
-        if(query) {
-            const results = state.suppliers.filter(s => s.name.toLowerCase().includes(query));
-            renderAutocompleteResults(results.slice(0, 10), supplierAutocompleteResults, (supplier) => {
-                supplierNameSearchInput.value = supplier.name;
-                if(activePurchase) activePurchase.supplierName = supplier.name;
-                supplierAutocompleteResults.classList.add('hidden');
-                saveUiState();
-            });
+        if (activePurchase) {
+            supplierNameSearchInput.value = supplier.name;
+            activePurchase.supplierName = supplier.name;
+            saveUiState();
+        }
+        supplierAutocompleteResults.classList.add('hidden');
+    };
+
+    supplierNameSearchInput.addEventListener('focus', () => {
+        if (!supplierNameSearchInput.value.trim()) {
+            renderAutocompleteResults(state.suppliers.slice(0, 10), supplierAutocompleteResults, selectSupplier);
             supplierAutocompleteResults.classList.remove('hidden');
-        } else {
-            supplierAutocompleteResults.classList.add('hidden');
         }
     });
-    
+
+    supplierNameSearchInput.addEventListener('input', (e) => {
+        const rawQuery = e.target.value;
+        const activePurchase = getActivePurchase();
+        if (activePurchase) activePurchase.supplierName = rawQuery.trim();
+        saveUiState();
+        const query = rawQuery.trim().toLowerCase();
+        if (!query) {
+            renderAutocompleteResults(state.suppliers.slice(0, 10), supplierAutocompleteResults, selectSupplier);
+            supplierAutocompleteResults.classList.remove('hidden');
+            return;
+        }
+        const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+        const normalizedQuery = removeDiacritics(query);
+        const keywords = normalizedQuery.split(/\s+/).filter(Boolean);
+        const results = state.suppliers.filter(s => {
+            const normalizedName = removeDiacritics(s.name.toLowerCase());
+            return keywords.every(kw => normalizedName.includes(kw));
+        });
+        renderAutocompleteResults(results.slice(0, 10), supplierAutocompleteResults, selectSupplier);
+        supplierAutocompleteResults.classList.remove('hidden');
+    });
+
     document.addEventListener('click', (e) => {
         if (!productSearchInput.contains(e.target)) autocompleteResultsContainer.classList.add('hidden');
         if (!supplierNameSearchInput.contains(e.target)) supplierAutocompleteResults.classList.add('hidden');
@@ -343,10 +389,8 @@ productSearchInput.addEventListener('input', (e) => {
             if (!activePurchase) return;
             const id = e.target.dataset.id;
             const input = e.target;
-            
             let value = input.value.replace(/\D/g, '');
             input.value = value ? formatNumber(value) : '';
-
             const newPrice = parseFloat(value) || 0;
             const item = activePurchase.items.find(i => i.id === id);
             if (item) {
@@ -361,51 +405,35 @@ productSearchInput.addEventListener('input', (e) => {
         }
     });
 
-    // THAY THẾ TOÀN BỘ HÀM savePurchaseBtn CŨ BẰNG HÀM MỚI NÀY
-// File: purchase.js
-
-// THAY THẾ TOÀN BỘ HÀM savePurchaseBtn CŨ BẰNG HÀM MỚI NÀY
-savePurchaseBtn.addEventListener('click', async () => {
-    const activePurchase = getActivePurchase();
-    if (!activePurchase || activePurchase.items.length === 0) return;
-
-    // KIỂM TRA XEM ĐÂY LÀ TAB CHỈNH SỬA HAY KHÔNG
-    if (activePurchase.originalPurchaseId) {
-        // --- LOGIC CẬP NHẬT ---
-        const allPurchases = await db.getAllPurchases();
-        const purchaseToUpdate = allPurchases.find(p => p.id === activePurchase.originalPurchaseId);
-
-        if (purchaseToUpdate) {
-            // Cập nhật các trường thông tin
-            purchaseToUpdate.supplierName = activePurchase.supplierName.trim() || 'Không có';
-            purchaseToUpdate.items = activePurchase.items;
-            purchaseToUpdate.total = activePurchase.total;
-            purchaseToUpdate.date = new Date().toISOString(); // Cập nhật lại ngày chỉnh sửa
-
-            await db.updatePurchase(purchaseToUpdate);
-            alert(`Đã cập nhật thành công phiếu nhập: ${purchaseToUpdate.id}`);
+    savePurchaseBtn.addEventListener('click', async () => {
+        const activePurchase = getActivePurchase();
+        if (!activePurchase || activePurchase.items.length === 0) return;
+        if (activePurchase.originalPurchaseId) {
+            const purchaseToUpdate = state.allPurchases.find(p => p.id === activePurchase.originalPurchaseId);
+            if (purchaseToUpdate) {
+                purchaseToUpdate.supplierName = activePurchase.supplierName.trim() || 'N/A';
+                purchaseToUpdate.items = activePurchase.items;
+                purchaseToUpdate.total = activePurchase.total;
+                purchaseToUpdate.date = new Date().toISOString();
+                await db.updatePurchase(purchaseToUpdate);
+                alert(`Đã cập nhật thành công phiếu nhập: ${purchaseToUpdate.id}`);
+            } else {
+                alert(`Không tìm thấy phiếu nhập gốc để cập nhật.`);
+            }
         } else {
-            alert(`Không tìm thấy phiếu nhập gốc để cập nhật.`);
+            const newPurchase = {
+                id: `PN-${Date.now()}`,
+                date: new Date().toISOString(),
+                supplierName: activePurchase.supplierName.trim() || 'N/A',
+                items: activePurchase.items,
+                total: activePurchase.total,
+            };
+            await db.addPurchase(newPurchase);
+            showPurchaseDetailModal(newPurchase);
         }
-    } else {
-        // --- LOGIC TẠO MỚI (giữ nguyên như cũ) ---
-        const newPurchase = {
-            id: `PN-${Date.now()}`, 
-            date: new Date().toISOString(),
-            supplierName: activePurchase.supplierName.trim() || 'Không có',
-            items: activePurchase.items, 
-            total: activePurchase.total,
-        };
+        closePurchaseTab(activePurchase.id);
+    });
 
-        await db.addPurchase(newPurchase);
-        showPurchaseDetailModal(newPurchase); 
-    }
-    
-    // Đóng tab hiện tại sau khi lưu
-    closePurchaseTab(activePurchase.id);
-});
-
-    // Quick Add Supplier Modal Logic
     quickAddSupplierBtn.addEventListener('click', () => {
         quickSupplierNameInput.value = supplierNameSearchInput.value;
         quickSupplierModal.classList.remove('hidden');
@@ -413,89 +441,77 @@ savePurchaseBtn.addEventListener('click', async () => {
     });
     closeQuickSupplierModalBtn.addEventListener('click', () => quickSupplierModal.classList.add('hidden'));
     saveQuickSupplierBtn.addEventListener('click', async () => {
-    const name = quickSupplierNameInput.value.trim();
-    if (!name) {
-        alert('Tên Nhà Cung Cấp không được để trống.');
-        return;
-    }
-
-    // --- LOGIC KIỂM TRA TÊN TRÙNG LẶP ---
-    const normalizedNewName = name.toLowerCase();
-    const isDuplicate = state.suppliers.some(supplier => supplier.name.toLowerCase() === normalizedNewName);
-
-    if (isDuplicate) {
-        alert(`Tên nhà cung cấp "${name}" đã tồn tại. Vui lòng nhập tên khác.`);
-        return; // Dừng hàm nếu phát hiện tên trùng lặp
-    }
-    // --- KẾT THÚC LOGIC KIỂM TRA ---
-
-    // Nếu tên hợp lệ (không trùng), tiếp tục tạo mới
-    const newSupplier = { id: `NCC-${Date.now()}`, name };
-    await db.addSupplier(newSupplier);
-    state.suppliers.push(newSupplier);
-    
-    const activePurchase = getActivePurchase();
-    if(activePurchase) {
-         supplierNameSearchInput.value = name;
-         activePurchase.supplierName = name;
-    }
-   
-    quickSupplierModal.classList.add('hidden');
-    alert(`Đã thêm NCC mới: ${name}`);
-});
-
+        const name = quickSupplierNameInput.value.trim();
+        if (!name) {
+            alert('Tên Nhà Cung Cấp không được để trống.');
+            return;
+        }
+        const normalizedNewName = name.toLowerCase();
+        const isDuplicate = state.suppliers.some(supplier => supplier.name.toLowerCase() === normalizedNewName);
+        if (isDuplicate) {
+            alert(`Tên nhà cung cấp "${name}" đã tồn tại. Vui lòng nhập tên khác.`);
+            return;
+        }
+        const newSupplier = { id: `NCC-${Date.now()}`, name };
+        await db.addSupplier(newSupplier);
+        state.suppliers.push(newSupplier);
+        const activePurchase = getActivePurchase();
+        if (activePurchase) {
+            supplierNameSearchInput.value = name;
+            activePurchase.supplierName = name;
+        }
+        quickSupplierModal.classList.add('hidden');
+        alert(`Đã thêm NCC mới: ${name}`);
+    });
 
     // --- INITIALIZATION ---
-    // THAY THẾ TOÀN BỘ HÀM INIT CŨ BẰNG HÀM NÀY
-const init = async () => {
-    await loadData();
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const purchaseIdToEdit = urlParams.get('edit');
-
-    if (purchaseIdToEdit) {
-        const purchaseToEdit = state.allPurchases.find(p => p.id === purchaseIdToEdit);
-        if (purchaseToEdit) {
-            const newPurchaseTab = {
-                id: state.nextPurchaseId++,
-                items: JSON.parse(JSON.stringify(purchaseToEdit.items)), // Tạo bản sao sâu
-                supplierName: purchaseToEdit.supplierName,
-                total: purchaseToEdit.total,
-                originalPurchaseId: purchaseIdToEdit // Lưu lại ID gốc để xử lý cập nhật sau này
-            };
-            state.purchaseTabs.push(newPurchaseTab);
-            state.activePurchaseId = newPurchaseTab.id;
+    const init = async () => {
+        await loadData();
+        const urlParams = new URLSearchParams(window.location.search);
+        const purchaseIdToEdit = urlParams.get('edit');
+        if (purchaseIdToEdit) {
+            const purchaseToEdit = state.allPurchases.find(p => p.id === purchaseIdToEdit);
+            if (purchaseToEdit) {
+                const existingTab = state.purchaseTabs.find(p => p.originalPurchaseId === purchaseIdToEdit);
+                if (!existingTab) {
+                    const newPurchaseTab = {
+                        id: state.nextPurchaseId++,
+                        items: JSON.parse(JSON.stringify(purchaseToEdit.items)),
+                        supplierName: purchaseToEdit.supplierName,
+                        total: purchaseToEdit.total,
+                        originalPurchaseId: purchaseIdToEdit
+                    };
+                    state.purchaseTabs.push(newPurchaseTab);
+                    state.activePurchaseId = newPurchaseTab.id;
+                } else {
+                    state.activePurchaseId = existingTab.id;
+                }
+            }
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
-        // Xóa param khỏi URL để tránh load lại khi refresh
-        window.history.replaceState({}, document.title, window.location.pathname);
-    }
-
-    renderActivePurchaseUI();
-};
+        renderActivePurchaseUI();
+    };
 
     init();
-});// DÁN TOÀN BỘ ĐOẠN MÃ NÀY VÀO CUỐI TỆP purchase.js
+});
 
 const showPurchaseDetailModal = (purchase) => {
-    // Lấy các element từ modal mới
     const modal = document.getElementById('purchase-detail-modal');
     const titleEl = document.getElementById('purchase-detail-modal-title');
     const contentEl = document.getElementById('purchase-detail-modal-content');
     const closeModalBtn = document.getElementById('close-purchase-detail-modal-btn');
     const closeModalBtnFooter = document.getElementById('close-purchase-detail-modal-btn-footer');
     const downloadPdfBtn = document.getElementById('download-pdf-btn');
-
-    // Cập nhật nội dung cho popup
     titleEl.textContent = `Chi Tiết Phiếu Nhập: ${purchase.id}`;
-    
     const itemsHtml = purchase.items.map((item, index) => `
         <tr class="border-b">
             <td class="p-2 text-center">${index + 1}</td>
             <td class="p-2">${item.name}</td>
             <td class="p-2 text-center">${item.quantity}</td>
+            <td class="p-2 text-right">${new Intl.NumberFormat('vi-VN').format(item.importPrice)}</td>
+            <td class="p-2 text-right">${new Intl.NumberFormat('vi-VN').format(item.importPrice * item.quantity)}</td>
         </tr>
     `).join('');
-
     contentEl.innerHTML = `
         <div class="grid grid-cols-2 gap-x-4 gap-y-2 mb-4">
             <div><strong>Nhà cung cấp:</strong> ${purchase.supplierName}</div>
@@ -506,64 +522,42 @@ const showPurchaseDetailModal = (purchase) => {
                 <tr>
                     <th class="p-2 text-center w-16">STT</th>
                     <th class="p-2">Tên hàng</th>
-                    <th class="p-2 text-center w-24">Số Lượng</th>
+                    <th class="p-2 text-center w-24">SL</th>
+                    <th class="p-2 text-right">Giá nhập</th>
+                    <th class="p-2 text-right">Thành tiền</th>
                 </tr>
             </thead>
             <tbody>${itemsHtml}</tbody>
         </table>
         <div class="mt-4 pt-4 border-t text-right font-bold text-lg">
-            Tổng số loại hàng: ${purchase.items.length}
+            Tổng cộng: ${new Intl.NumberFormat('vi-VN').format(purchase.total)} VNĐ
         </div>
     `;
-
-    // Gán sự kiện cho các nút
     const closeModal = () => modal.classList.add('hidden');
     closeModalBtn.onclick = closeModal;
     closeModalBtnFooter.onclick = closeModal;
-
-    // Xóa listener cũ và gán listener mới cho nút tải PDF
     const newDownloadBtn = downloadPdfBtn.cloneNode(true);
     downloadPdfBtn.parentNode.replaceChild(newDownloadBtn, downloadPdfBtn);
     newDownloadBtn.addEventListener('click', () => {
         generateAndDownloadPDF(purchase);
     });
-
-    // Hiển thị modal
     modal.classList.remove('hidden');
 };
 
 const generateAndDownloadPDF = (purchase) => {
     const { jsPDF } = window.jspdf;
     const elementToCapture = document.getElementById('purchase-detail-modal-content');
-    
     alert('Đang chuẩn bị file PDF, vui lòng chờ...');
-
     html2canvas(elementToCapture, { scale: 2 }).then(canvas => {
         const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({
-            orientation: 'p',
-            unit: 'mm',
-            format: 'a4'
-        });
-
+        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
         const canvasWidth = canvas.width;
         const canvasHeight = canvas.height;
         const ratio = canvasWidth / canvasHeight;
-
-        let imgWidth = pdfWidth - 20; // Trừ lề 10mm mỗi bên
+        let imgWidth = pdfWidth - 20;
         let imgHeight = imgWidth / ratio;
-
-        if (imgHeight > pdfHeight - 20) {
-            imgHeight = pdfHeight - 20;
-            imgWidth = imgHeight * ratio;
-        }
-        
-        const x = (pdfWidth - imgWidth) / 2;
-        const y = 10; // Căn lề trên 10mm
-
-        pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+        pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
         pdf.save(`phieu-nhap-${purchase.id}.pdf`);
     }).catch(err => {
         console.error("Lỗi khi tạo PDF:", err);
