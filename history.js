@@ -512,5 +512,16 @@ if (importAllBtn && importAllInput) {
 }
 // ---------------------------------------------------------------- //
 
-init(); // Dòng này đã có sẵn ở cuối tệp, bạn chỉ cần dán code vào trước nó.
+init(); 
+// --- ĐĂNG KÝ SERVICE WORKER ---
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((reg) => {
+        console.log('Service worker registered successfully.', reg);
+      }).catch((err) => {
+        console.log('Service worker registration failed: ', err);
+      });
+  });
+}
 });
