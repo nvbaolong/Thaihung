@@ -413,3 +413,46 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 });
+// --- LOGIC KIỂM TRA VÀ THÔNG BÁO CẬP NHẬT ---
+(() => {
+    let newWorker;
+
+    function showUpdateBar() {
+        let toast = document.getElementById('update-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'update-toast';
+            toast.innerHTML = `
+                <span>Có phiên bản mới.</span>
+                <button id="reload-button" class="ml-4 font-bold underline">Cập nhật ngay</button>
+            `;
+            document.body.appendChild(toast);
+
+            document.getElementById('reload-button').addEventListener('click', () => {
+                newWorker.postMessage({ action: 'skipWaiting' });
+            });
+        }
+        // Thêm class để kích hoạt animation
+        toast.classList.add('show');
+    }
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+            reg.addEventListener('updatefound', () => {
+                newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        showUpdateBar();
+                    }
+                });
+            });
+        });
+
+        let refreshing;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            window.location.reload();
+            refreshing = true;
+        });
+    }
+})();

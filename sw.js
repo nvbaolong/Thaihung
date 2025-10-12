@@ -1,7 +1,6 @@
-// Tên của bộ nhớ cache - thay đổi tên này khi bạn cập nhật các tệp trong cache
-const CACHE_NAME = 'sales-dashboard-v3'; // <-- THAY ĐỔI LÊN v3
+// Thay đổi phiên bản mỗi khi bạn deploy code mới
+const CACHE_NAME = 'sales-dashboard-v4';
 
-// Danh sách các tệp cần thiết để ứng dụng có thể chạy offline
 const FILES_TO_CACHE = [
   '/',
   'index.html',
@@ -20,24 +19,21 @@ const FILES_TO_CACHE = [
   'purchase.js',
   'order-detail.js',
   'purchase-detail.js',
-  // CÁC LINK CDN CẦN CACHE
-  'https://cdn.tailwindcss.com', // <-- THÊM DÒNG NÀY
+  'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
 ];
 
-// Sự kiện "install": được gọi khi Service Worker được cài đặt lần đầu
 self.addEventListener('install', (evt) => {
   console.log('[ServiceWorker] Install');
   evt.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[ServiceWorker] Pre-caching offline page');
+      console.log('[ServiceWorker] Pre-caching offline pages');
       return cache.addAll(FILES_TO_CACHE);
     })
   );
-  self.skipWaiting();
+  // Không gọi skipWaiting() ngay lập tức ở đây nữa
 });
 
-// Sự kiện "activate": dọn dẹp cache cũ
 self.addEventListener('activate', (evt) => {
     console.log('[ServiceWorker] Activate');
     evt.waitUntil(
@@ -53,19 +49,21 @@ self.addEventListener('activate', (evt) => {
     self.clients.claim();
 });
 
-// Sự kiện "fetch": được gọi mỗi khi ứng dụng yêu cầu một tài nguyên
+// --- THÊM SỰ KIỆN MỚI NÀY VÀO ---
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.action === 'skipWaiting') {
+        self.skipWaiting();
+    }
+});
+// ------------------------------------
+
 self.addEventListener('fetch', (evt) => {
   if (evt.request.method !== 'GET') {
     return;
   }
   evt.respondWith(
     caches.match(evt.request).then((response) => {
-      // Nếu có trong cache, trả về từ cache
-      if (response) {
-        return response;
-      }
-      // Nếu không có trong cache, thử lấy từ mạng
-      return fetch(evt.request);
+      return response || fetch(evt.request);
     })
   );
 });

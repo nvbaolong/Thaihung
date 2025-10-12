@@ -96,3 +96,33 @@ main table thead {
 #toast-message.show {
     opacity: 1;
 }
+/* --- CSS CHO THÔNG BÁO CẬP NHẬT (TOAST) --- */
+#update-toast {
+    position: fixed;
+    bottom: 1.5rem; /* 24px */
+    right: 1.5rem; /* 24px */
+    background-color: #2563eb; /* bg-blue-600 */
+    color: white;
+    padding: 0.75rem 1.5rem; /* py-3 px-6 */
+    border-radius: 0.5rem; /* rounded-lg */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+    display: flex;
+    align-items: center;
+    transform: translateY(200%);
+    transition: transform 0.3s ease-in-out;
+    z-index: 100;
+}
+
+#update-toast.show {
+    transform: translateY(0);
+}
+
+#update-toast button {
+    margin-left: 1rem; /* ml-4 */
+    font-weight: bold;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
