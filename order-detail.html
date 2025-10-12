@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi Tiết Đơn Hàng</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* CSS để ẩn các nút khi in */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: #fff;
+            }
+            main {
+                box-shadow: none;
+                border: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans p-4 sm:p-6 lg:p-8">
+
+    <header class="max-w-4xl mx-auto mb-4 no-print">
+        <a id="back-btn-header" href="#" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Quay Lại 
+        </a>
+    </header>
+
+    <main id="order-content" class="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-lg">
+        <div class="text-center text-gray-500">
+            <p>Đang tải chi tiết đơn hàng...</p>
+        </div>
+    </main>
+
+    <footer class="max-w-4xl mx-auto mt-6 text-right space-x-3 no-print">
+        <button id="print-btn" class="px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">
+            <i class="fas fa-print mr-2"></i>In Hóa Đơn
+        </button>
+        <a id="close-btn-footer" href="#" class="px-5 py-2 bg-gray-300 text-gray-800 font-semibold rounded-lg hover:bg-gray-400">
+            Đóng
+        </a>
+    </footer>
+
+    <script src="db.js"></script>
+    <script src="order-detail.js"></script>
+</body>
+</html>

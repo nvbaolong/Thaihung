@@ -405,9 +405,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // --- SỬA ĐỔI TẠI ĐÂY ---
     savePurchaseBtn.addEventListener('click', async () => {
         const activePurchase = getActivePurchase();
         if (!activePurchase || activePurchase.items.length === 0) return;
+
+        let savedPurchase;
+
         if (activePurchase.originalPurchaseId) {
             const purchaseToUpdate = state.allPurchases.find(p => p.id === activePurchase.originalPurchaseId);
             if (purchaseToUpdate) {
@@ -416,9 +420,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 purchaseToUpdate.total = activePurchase.total;
                 purchaseToUpdate.date = new Date().toISOString();
                 await db.updatePurchase(purchaseToUpdate);
-                alert(`Đã cập nhật thành công phiếu nhập: ${purchaseToUpdate.id}`);
+                savedPurchase = purchaseToUpdate;
+                alert(`Đã cập nhật thành công phiếu nhập: ${savedPurchase.id}`);
             } else {
                 alert(`Không tìm thấy phiếu nhập gốc để cập nhật.`);
+                return; // Dừng lại nếu không tìm thấy phiếu gốc
             }
         } else {
             const newPurchase = {
@@ -429,9 +435,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 total: activePurchase.total,
             };
             await db.addPurchase(newPurchase);
-            showPurchaseDetailModal(newPurchase);
+            savedPurchase = newPurchase;
         }
+
+        // Sau khi lưu thành công (cả mới và cũ), đóng tab hiện tại
         closePurchaseTab(activePurchase.id);
+
+        // Chuyển hướng đến trang chi tiết
+        if (savedPurchase) {
+            window.location.href = `purchase-detail.html?id=${savedPurchase.id}`;
+        }
     });
 
     quickAddSupplierBtn.addEventListener('click', () => {
@@ -493,85 +506,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     init();
-});
 
-const showPurchaseDetailModal = (purchase) => {
-    const modal = document.getElementById('purchase-detail-modal');
-    const titleEl = document.getElementById('purchase-detail-modal-title');
-    const contentEl = document.getElementById('purchase-detail-modal-content');
-    const closeModalBtn = document.getElementById('close-purchase-detail-modal-btn');
-    const closeModalBtnFooter = document.getElementById('close-purchase-detail-modal-btn-footer');
-    const downloadPdfBtn = document.getElementById('download-pdf-btn');
-    titleEl.textContent = `Chi Tiết Phiếu Nhập: ${purchase.id}`;
-    const itemsHtml = purchase.items.map((item, index) => `
-        <tr class="border-b">
-            <td class="p-2 text-center">${index + 1}</td>
-            <td class="p-2">${item.name}</td>
-            <td class="p-2 text-center">${item.quantity}</td>
-            <td class="p-2 text-right">${new Intl.NumberFormat('vi-VN').format(item.importPrice)}</td>
-            <td class="p-2 text-right">${new Intl.NumberFormat('vi-VN').format(item.importPrice * item.quantity)}</td>
-        </tr>
-    `).join('');
-    contentEl.innerHTML = `
-        <div class="grid grid-cols-2 gap-x-4 gap-y-2 mb-4">
-            <div><strong>Nhà cung cấp:</strong> ${purchase.supplierName}</div>
-            <div><strong>Ngày tạo:</strong> ${new Date(purchase.date).toLocaleString('vi-VN')}</div>
-        </div>
-        <table class="w-full">
-            <thead class="uppercase bg-gray-100">
-                <tr>
-                    <th class="p-2 text-center w-16">STT</th>
-                    <th class="p-2">Tên hàng</th>
-                    <th class="p-2 text-center w-24">SL</th>
-                    <th class="p-2 text-right">Giá nhập</th>
-                    <th class="p-2 text-right">Thành tiền</th>
-                </tr>
-            </thead>
-            <tbody>${itemsHtml}</tbody>
-        </table>
-        <div class="mt-4 pt-4 border-t text-right font-bold text-lg">
-            Tổng cộng: ${new Intl.NumberFormat('vi-VN').format(purchase.total)} VNĐ
-        </div>
-    `;
-    const closeModal = () => modal.classList.add('hidden');
-    closeModalBtn.onclick = closeModal;
-    closeModalBtnFooter.onclick = closeModal;
-    const newDownloadBtn = downloadPdfBtn.cloneNode(true);
-    downloadPdfBtn.parentNode.replaceChild(newDownloadBtn, downloadPdfBtn);
-    newDownloadBtn.addEventListener('click', () => {
-        generateAndDownloadPDF(purchase);
-    });
-    modal.classList.remove('hidden');
-};
-
-const generateAndDownloadPDF = (purchase) => {
-    const { jsPDF } = window.jspdf;
-    const elementToCapture = document.getElementById('purchase-detail-modal-content');
-    alert('Đang chuẩn bị file PDF, vui lòng chờ...');
-    html2canvas(elementToCapture, { scale: 2 }).then(canvas => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const canvasWidth = canvas.width;
-        const canvasHeight = canvas.height;
-        const ratio = canvasWidth / canvasHeight;
-        let imgWidth = pdfWidth - 20;
-        let imgHeight = imgWidth / ratio;
-        pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
-        pdf.save(`phieu-nhap-${purchase.id}.pdf`);
-    }).catch(err => {
-        console.error("Lỗi khi tạo PDF:", err);
-        alert("Đã xảy ra lỗi khi tạo file PDF.");
-    });
     // --- ĐĂNG KÝ SERVICE WORKER ---
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((reg) => {
-        console.log('Service worker registered successfully.', reg);
-      }).catch((err) => {
-        console.log('Service worker registration failed: ', err);
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((reg) => {
+            console.log('Service worker registered successfully.', reg);
+          }).catch((err) => {
+            console.log('Service worker registration failed: ', err);
+          });
       });
-  });
-}
-};
+    }
+});

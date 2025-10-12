@@ -440,20 +440,24 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
         renderActiveInvoiceUI();
     };
 
-    saveOrderBtn.addEventListener('click', async () => { // Chuyển sang async
-        const savedOrder = await saveCurrentOrder();
-        if (savedOrder) {
-            const invoiceThatWasSaved = state.invoiceTabs.find(inv => inv.id === state.activeInvoiceId);
+    saveOrderBtn.addEventListener('click', async () => {
+    const savedOrder = await saveCurrentOrder();
+    if (savedOrder) {
+        const invoiceThatWasSaved = state.invoiceTabs.find(inv => inv.id === state.activeInvoiceId);
 
-            if (invoiceThatWasSaved && invoiceThatWasSaved.originalOrderId) {
-                alert(`Đã cập nhật đơn hàng ${savedOrder.id}`);
-            } else {
-                app.showOrderDetailModal(savedOrder);
-            }
-            
-            closeInvoiceTab(state.activeInvoiceId);
+        if (invoiceThatWasSaved && invoiceThatWasSaved.originalOrderId) {
+            alert(`Đã cập nhật đơn hàng ${savedOrder.id}`);
+            // Sau khi cập nhật, có thể điều hướng về trang lịch sử để xem lại
+            window.location.href = `history.html`; 
+        } else {
+            // Chuyển hướng đến trang chi tiết mới và truyền ID của đơn hàng qua URL
+            window.location.href = `order-detail.html?id=${savedOrder.id}`;
         }
-    });
+        
+        // Xóa tab hóa đơn sau khi đã lưu
+        closeInvoiceTab(state.activeInvoiceId);
+    }
+});
 
     // --- Search Logic ---
     orderProductSearchInput.addEventListener('input', (e) => {
