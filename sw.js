@@ -1,16 +1,16 @@
 // Tên của bộ nhớ cache - thay đổi tên này khi bạn cập nhật các tệp trong cache
-const CACHE_NAME = 'sales-dashboard-v2'; // Thay đổi phiên bản
+const CACHE_NAME = 'sales-dashboard-v3'; // <-- THAY ĐỔI LÊN v3
 
 // Danh sách các tệp cần thiết để ứng dụng có thể chạy offline
 const FILES_TO_CACHE = [
-  '/', 
+  '/',
   'index.html',
   'history.html',
   'manage.html',
   'customers.html',
   'purchase.html',
-  'order-detail.html',      // <-- THÊM MỚI
-  'purchase-detail.html',   // <-- THÊM MỚI
+  'order-detail.html',
+  'purchase-detail.html',
   'style.css',
   'db.js',
   'script.js',
@@ -18,8 +18,10 @@ const FILES_TO_CACHE = [
   'manage.js',
   'customers.js',
   'purchase.js',
-  'order-detail.js',      // <-- THÊM MỚI
-  'purchase-detail.js',   // <-- THÊM MỚI
+  'order-detail.js',
+  'purchase-detail.js',
+  // CÁC LINK CDN CẦN CACHE
+  'https://cdn.tailwindcss.com', // <-- THÊM DÒNG NÀY
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
 ];
 
@@ -51,16 +53,18 @@ self.addEventListener('activate', (evt) => {
     self.clients.claim();
 });
 
-// Sự kiện "fetch"
+// Sự kiện "fetch": được gọi mỗi khi ứng dụng yêu cầu một tài nguyên
 self.addEventListener('fetch', (evt) => {
   if (evt.request.method !== 'GET') {
     return;
   }
   evt.respondWith(
     caches.match(evt.request).then((response) => {
+      // Nếu có trong cache, trả về từ cache
       if (response) {
         return response;
       }
+      // Nếu không có trong cache, thử lấy từ mạng
       return fetch(evt.request);
     })
   );
