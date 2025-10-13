@@ -58,12 +58,20 @@ self.addEventListener('message', (event) => {
 // ------------------------------------
 
 self.addEventListener('fetch', (evt) => {
-  if (evt.request.method !== 'GET') {
-    return;
-  }
+  if (evt.request.method !== 'GET') return;
+
   evt.respondWith(
-    caches.match(evt.request).then((response) => {
-      return response || fetch(evt.request);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      try {
+        // Ưu tiên fetch bản mới nhất
+        const fresh = await fetch(evt.request);
+        cache.put(evt.request, fresh.clone());
+        return fresh;
+      } catch (e) {
+        // Nếu offline, dùng cache cũ
+        const cached = await cache.match(evt.request);
+        return cached || Promise.reject('no-match');
+      }
     })
   );
 });

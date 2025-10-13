@@ -864,8 +864,8 @@ const exportAllData = async () => {
         const products = await db.getAllProducts();
         const orders = await db.getAllOrders();
         const customers = await db.getAllCustomers();
-        const purchases = await db.getAllPurchases(); // <-- THÊM MỚI
-        const suppliers = await db.getAllSuppliers(); // <-- THÊM MỚI
+        const purchases = await db.getAllPurchases();
+        const suppliers = await db.getAllSuppliers();
 
         if (products.length === 0 && orders.length === 0 && customers.length === 0 && purchases.length === 0 && suppliers.length === 0) {
             alert('Chưa có dữ liệu để xuất.');
@@ -873,29 +873,31 @@ const exportAllData = async () => {
         }
 
         const wb = XLSX.utils.book_new();
-        // Tạo các sheet tương ứng
         const wsProducts = XLSX.utils.json_to_sheet(products);
         const wsOrders = XLSX.utils.json_to_sheet(orders);
         const wsCustomers = XLSX.utils.json_to_sheet(customers);
-        const wsPurchases = XLSX.utils.json_to_sheet(purchases); // <-- THÊM MỚI
-        const wsSuppliers = XLSX.utils.json_to_sheet(suppliers); // <-- THÊM MỚI
+        const wsPurchases = XLSX.utils.json_to_sheet(purchases);
+        const wsSuppliers = XLSX.utils.json_to_sheet(suppliers);
 
-        // Thêm các sheet vào workbook
         XLSX.utils.book_append_sheet(wb, wsProducts, "Products");
         XLSX.utils.book_append_sheet(wb, wsOrders, "Orders");
         XLSX.utils.book_append_sheet(wb, wsCustomers, "Customers");
-        XLSX.utils.book_append_sheet(wb, wsPurchases, "Purchases"); // <-- THÊM MỚI
-        XLSX.utils.book_append_sheet(wb, wsSuppliers, "Suppliers"); // <-- THÊM MỚI
+        XLSX.utils.book_append_sheet(wb, wsPurchases, "Purchases");
+        XLSX.utils.book_append_sheet(wb, wsSuppliers, "Suppliers");
 
         const today = new Date().toISOString().split('T')[0];
         const filename = `SalesDashboard_Backup_${today}.xlsx`;
         XLSX.writeFile(wb, filename);
         alert('Đã xuất toàn bộ dữ liệu thành công!');
-    } catch(error) {
+    } catch (error) {
         console.error("Lỗi khi xuất dữ liệu:", error);
         alert("Đã xảy ra lỗi trong quá trình xuất dữ liệu.");
     }
 };
+
+// 👇 DÒNG QUAN TRỌNG: giúp toast gọi được hàm này
+window.exportAllData = exportAllData;
+
 
 const importAllData = (file) => {
     if (!confirm('CẢNH BÁO: Thao tác này sẽ XÓA TOÀN BỘ dữ liệu hiện tại (Bán Hàng, Nhập Hàng, Khách Hàng,...) và thay thế bằng dữ liệu từ tệp Excel. Bạn có chắc chắn muốn tiếp tục?')) {
@@ -1058,3 +1060,89 @@ if ('serviceWorker' in navigator) {
         });
     }
 })();
+// --- TOAST NHẮC NGƯỜI DÙNG BACKUP / CẬP NHẬT DỮ LIỆU ---
+function showBackupToast(message, type = 'info', clickable = false) {
+  let toast = document.getElementById('backup-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'backup-toast';
+    document.body.appendChild(toast);
+  }
+
+  toast.className = `show ${type}`;
+  toast.textContent = message;
+
+  // Nếu cho phép click → chạy exportAllData()
+  if (clickable) {
+    toast.style.cursor = 'pointer';
+    toast.onclick = async () => {
+      toast.onclick = null; // chặn click liên tục
+      toast.textContent = "⏳ Đang xuất dữ liệu...";
+      try {
+        await exportAllData();
+        const today = new Date().toDateString();
+        localStorage.setItem('lastBackupDate', today);
+        toast.textContent = "✅ Đã xuất dữ liệu hôm nay!";
+        toast.classList.remove('warning');
+        toast.classList.add('success');
+      } catch (err) {
+        console.error(err);
+        toast.textContent = "❌ Lỗi khi xuất dữ liệu!";
+      }
+      // Tự ẩn sau 3s sau khi xuất xong
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    };
+  } else {
+    toast.style.cursor = 'default';
+    toast.onclick = null;
+  }
+
+  // Tự động ẩn sau 5 giây nếu không bấm
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 5000);
+}
+
+function checkDailyBackupStatus() {
+  const today = new Date().toDateString();
+  const lastBackupDate = localStorage.getItem('lastBackupDate');
+
+  if (lastBackupDate === today) {
+    // Đã cập nhật hôm nay
+    showBackupToast("✅ Bạn đã cập nhật dữ liệu hôm nay.", "success", false);
+  } else {
+    // Chưa cập nhật hôm nay
+    showBackupToast("⚠️ Bạn chưa cập nhật dữ liệu hôm nay! (Nhấn để xuất)", "warning", true);
+  }
+}
+
+// Gọi kiểm tra khi app khởi động
+window.addEventListener('load', checkDailyBackupStatus);
+
+// Khi người dùng xuất dữ liệu thủ công → lưu ngày hôm nay
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'export-all-btn') {
+    const today = new Date().toDateString();
+    localStorage.setItem('lastBackupDate', today);
+  }
+});
+
+// --- NÚT FLOATING: LÀM MỚI ỨNG DỤNG (KHÔNG MẤT DỮ LIỆU) ---
+document.addEventListener('DOMContentLoaded', async () => {
+  const refreshBtn = document.getElementById('refresh-float-btn');
+  if (!refreshBtn) return;
+
+  refreshBtn.addEventListener('click', async () => {
+    if (!confirm("🔄 Làm mới ứng dụng?\n\nCác dữ liệu trong kho (đơn hàng, khách hàng, hàng hóa...) sẽ được GIỮ LẠI.")) return;
+
+    try {
+      const cacheNames = await caches.keys();
+      for (const name of cacheNames) await caches.delete(name);
+      alert("✅ Cache đã được xóa. Ứng dụng sẽ tải lại phiên bản mới nhất.");
+      location.reload(true);
+    } catch (err) {
+      console.error("Lỗi khi làm mới cache:", err);
+      alert("❌ Không thể làm mới ứng dụng. Vui lòng thử lại.");
+    }
+  });
+});

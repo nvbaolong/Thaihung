@@ -126,3 +126,60 @@ main table thead {
     color: white;
     cursor: pointer;
 }
+#backup-toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    background-color: #16a34a; /* xanh lá */
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    transform: translateY(200%);
+    transition: transform 0.3s ease-in-out;
+    z-index: 100;
+}
+
+#backup-toast.show {
+    transform: translateY(0);
+}
+
+#backup-toast button {
+    margin-left: 1rem;
+    font-weight: bold;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+/* --- Nút Làm mới nổi (floating refresh button) --- */
+#refresh-float-btn {
+  position: fixed;
+  bottom: 1.5rem; /* 24px */
+  right: 1.5rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #2563eb; /* blue-600 */
+  color: white;
+  border: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  transition: transform 0.2s ease, background-color 0.3s ease;
+}
+
+#refresh-float-btn:hover {
+  background-color: #1d4ed8; /* blue-700 */
+  transform: rotate(90deg);
+}
+
+#refresh-float-btn i {
+  font-size: 1.1rem;
+}
