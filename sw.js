@@ -1,5 +1,5 @@
 // Thay đổi phiên bản mỗi khi bạn deploy code mới
-const CACHE_NAME = 'sales-dashboard-v4';
+const CACHE_NAME = 'sales-dashboard-v5';
 
 const FILES_TO_CACHE = [
   '/',
