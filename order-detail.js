@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeBtnFooter = document.getElementById('close-btn-footer');
 
     // --- LOGIC NÚT QUAY LẠI ---
-    // Gán sự kiện click để quay lại trang trước đó trong lịch sử duyệt web
     const goBack = (event) => {
         event.preventDefault(); // Ngăn hành vi mặc định của thẻ <a>
         history.back();
@@ -60,45 +59,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         const detailsHtml = `
             <div class="flex justify-between items-start border-b pb-4 mb-4">
                 <div>
-                    <h2 class="text-3xl font-bold text-gray-800">Chi Tiết Đơn Hàng</h2>
+                    <h2 class="text-xl font-bold text-gray-800">Chi Tiết Đơn Hàng</h2>
                     <p class="text-gray-500">${order.id}</p>
                 </div>
-                <div class="text-right">
+                <div class="text-right text-base">
                     <p><strong>Ngày tạo:</strong> ${new Date(order.date).toLocaleString('vi-VN')}</p>
                     <p><strong>Khách hàng:</strong> ${order.customerName || 'Khách Lẻ'}</p>
                 </div>
             </div>
 
-            <table class="w-full mb-6">
-                <thead class="uppercase bg-gray-100 text-sm">
-                    <tr>
-                        <th class="p-2 text-center w-12">STT</th>
-                        <th class="p-2 text-left">Tên hàng</th>
-                        <th class="p-2 text-center w-20">SL</th>
-                        <th class="p-2 text-right w-32">Đơn giá</th>
-                        <th class="p-2 text-right w-40">Thành tiền</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${itemsHtml}
-                </tbody>
-            </table>
+            <div class="text-lg">
+                <table class="w-full mb-6">
+                    <thead class="uppercase bg-gray-100 text-sm">
+                        <tr>
+                            <th class="p-2 text-center w-[5%]">STT</th>
+                            <th class="p-2 text-left w-[45%]">Tên hàng</th>
+                            <th class="p-2 text-center w-[10%]">SL</th>
+                            <th class="p-2 text-right w-[20%]">Đơn giá</th>
+                            <th class="p-2 text-right w-[20%]">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-lg">
+                        ${itemsHtml}
+                    </tbody>
+                </table>
 
-            <div class="flex justify-end">
-                <div class="w-full max-w-sm space-y-3 text-lg">
-                    <div class="flex justify-between">
-                        <span class="font-semibold text-gray-600">Tổng cộng:</span>
-                        <span class="font-bold text-blue-600">${formatCurrency(order.total)}</span>
+                <div class="flex justify-end">
+                    <div class="w-full max-w-sm space-y-3 text-xl">
+                        <div class="flex justify-between">
+                            <span class="font-semibold text-gray-600">Tổng cộng:</span>
+                            <span class="font-bold text-blue-600">${formatCurrency(order.total)}</span>
+                        </div>
+                        ${isWholesale ? `
+                        <div class="flex justify-between">
+                            <span class="font-semibold text-gray-600">Đã trả:</span>
+                            <span>${formatCurrency(order.paidAmount)}</span>
+                        </div>
+                        <div class="flex justify-between text-red-600">
+                            <span class="font-bold">Còn nợ:</span>
+                            <span class="font-bold">${formatCurrency(order.debtAmount)}</span>
+                        </div>` : ''}
                     </div>
-                    ${isWholesale ? `
-                    <div class="flex justify-between">
-                        <span class="font-semibold text-gray-600">Đã trả:</span>
-                        <span>${formatCurrency(order.paidAmount)}</span>
-                    </div>
-                    <div class="flex justify-between text-red-600">
-                        <span class="font-bold">Còn nợ:</span>
-                        <span class="font-bold">${formatCurrency(order.debtAmount)}</span>
-                    </div>` : ''}
                 </div>
             </div>
         `;
@@ -112,6 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.print();
     });
 });
+
 // --- LOGIC KIỂM TRA VÀ THÔNG BÁO CẬP NHẬT ---
 (() => {
     let newWorker;
@@ -131,7 +133,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 newWorker.postMessage({ action: 'skipWaiting' });
             });
         }
-        // Thêm class để kích hoạt animation
         toast.classList.add('show');
     }
 
