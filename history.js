@@ -5,8 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let state = {
         orders: [],
-        purchases: [],
-        activeView: 'sales', // 'sales' hoặc 'purchases'
+        // REMOVED: purchases state is no longer needed here
         searchQuery: '',
         salesFilterType: 'all',
         currentPage: 1,
@@ -19,7 +18,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tableBody = document.getElementById('history-table-body');
     const searchBar = document.getElementById('history-search-bar');
     const salesFilters = document.getElementById('sales-filters');
-    const viewTabs = document.getElementById('view-tabs');
     const paginationControls = document.getElementById('pagination-controls');
 
     // Modal elements
@@ -39,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const formatCurrency = (value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value) || 0);
     const formatDateTime = (isoString) => new Date(isoString).toLocaleString('vi-VN');
 
-    // --- RENDER PAGINATION (LOGIC MỚI TỪ MANAGE.JS) ---
+    // --- RENDER PAGINATION ---
     const renderPagination = (totalItems) => {
         paginationControls.innerHTML = '';
         const totalPages = Math.ceil(totalItems / state.rowsPerPage);
@@ -55,11 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!disabled) {
                 btn.onclick = () => {
                     state.currentPage = page;
-                    if (state.activeView === 'sales') {
-                        renderSalesHistory();
-                    } else {
-                        renderPurchaseHistory();
-                    }
+                    renderSalesHistory(); // Always render sales history
                 };
             }
             return btn;
@@ -131,67 +125,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }).join('');
 
         renderPagination(filtered.length);
-    };
-
-    // --- RENDER PURCHASE HISTORY ---
-    const renderPurchaseHistory = () => {
-        tableHead.innerHTML = `
-            <tr>
-                <th class="px-6 py-3">ID Phiếu Nhập</th>
-                <th class="px-6 py-3">Nhà Cung Cấp</th>
-                <th id="sort-by-date" class="px-6 py-3 cursor-pointer hover:bg-gray-100">Ngày Nhập <i id="sort-icon" class="fas fa-sort-down ml-1"></i></th>
-                <th class="px-6 py-3 text-right">Tổng Tiền</th>
-                <th class="px-6 py-3">Thao Tác</th>
-            </tr>
-        `;
-
-        let filtered = state.purchases;
-        if (state.searchQuery) {
-            const query = removeDiacritics(state.searchQuery.toLowerCase());
-            filtered = filtered.filter(p => p.id.toLowerCase().includes(query) || (p.supplierName && removeDiacritics(p.supplierName.toLowerCase()).includes(query)));
-        }
-
-        filtered.sort((a, b) => state.sortDirection === 'asc' ? new Date(a.date) - new Date(b.date) : new Date(b.date) - new Date(a.date));
         
-        const start = (state.currentPage - 1) * state.rowsPerPage;
-        const end = start + state.rowsPerPage;
-        const paginated = filtered.slice(start, end);
-
-        tableBody.innerHTML = paginated.map(p => `
-            <tr class="bg-white border-b hover:bg-gray-50">
-                <td class="px-6 py-4 font-medium">${p.id}</td>
-                <td class="px-6 py-4">${p.supplierName || 'N/A'}</td>
-                <td class="px-6 py-4">${formatDateTime(p.date)}</td>
-                <td class="px-6 py-4 font-semibold text-right">${formatCurrency(p.total)}</td>
-                <td class="px-6 py-4 text-left whitespace-nowrap">
-                    <button class="text-blue-500 hover:underline" onclick="app.viewPurchaseDetails('${p.id}')">Xem</button>
-                    <button class="text-green-600 hover:underline ml-2" onclick="app.editPurchase('${p.id}')">Sửa</button>
-                    <button class="text-red-600 hover:underline ml-2" onclick="app.deletePurchase('${p.id}')">Xóa</button>
-                </td>
-            </tr>
-        `).join('');
-        renderPagination(filtered.length);
-    };
-
-    // --- MAIN RENDER FUNCTION ---
-    const renderActiveView = () => {
-        state.currentPage = 1; // Reset page on view change
-        if (state.activeView === 'sales') {
-            salesFilters.style.display = 'flex';
-            searchBar.placeholder = "Tìm theo ID, tên khách hàng...";
-            renderSalesHistory();
-        } else {
-            salesFilters.style.display = 'none';
-            searchBar.placeholder = "Tìm theo ID, tên nhà cung cấp...";
-            renderPurchaseHistory();
-        }
-
+        // Add sort event listener after rendering
         const sortByDateBtn = document.getElementById('sort-by-date');
         if (sortByDateBtn) {
             sortByDateBtn.onclick = () => {
                 state.sortDirection = state.sortDirection === 'desc' ? 'asc' : 'desc';
-                if (state.activeView === 'sales') renderSalesHistory();
-                else renderPurchaseHistory();
+                renderSalesHistory();
             };
         }
     };
@@ -201,53 +141,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         editOrder: (orderId) => {
             window.location.href = `index.html?edit=${orderId}`;
         },
-        editPurchase: (purchaseId) => {
-            window.location.href = `purchase.html?edit=${purchaseId}`;
-        },
         viewOrderDetails: (orderId) => {
             window.location.href = `order-detail.html?id=${orderId}`;
         },
-        viewPurchaseDetails: (purchaseId) => {
-            window.location.href = `purchase-detail.html?id=${purchaseId}`;
-        },
-        deletePurchase: async (purchaseId) => {
-            if (confirm('Bạn có chắc chắn muốn xóa phiếu nhập này? Thao tác này không thể hoàn tác.')) {
-                try {
-                    await db.deletePurchase(purchaseId);
-                    state.purchases = state.purchases.filter(p => p.id !== purchaseId);
-                    renderPurchaseHistory();
-                    alert('Đã xóa phiếu nhập thành công!');
-                } catch (error) {
-                    console.error("Lỗi khi xóa phiếu nhập:", error);
-                    alert('Đã xảy ra lỗi khi xóa phiếu nhập.');
-                }
-            }
-        }
+        // REMOVED: purchase-related functions are moved to purchase.js
     };
 
     // --- INITIALIZATION ---
     const init = async () => {
         state.orders = await db.getAllOrders();
-        state.purchases = await db.getAllPurchases();
-
-        viewTabs.addEventListener('click', (e) => {
-            if (e.target.tagName === 'BUTTON') {
-                state.activeView = e.target.dataset.view;
-                viewTabs.querySelectorAll('button').forEach(btn => {
-                    btn.classList.remove('border-blue-500', 'text-blue-600');
-                    btn.classList.add('border-transparent', 'text-gray-500');
-                });
-                e.target.classList.add('border-blue-500', 'text-blue-600');
-                e.target.classList.remove('border-transparent', 'text-gray-500');
-                renderActiveView();
-            }
-        });
+        // REMOVED: No longer need to fetch purchases here
 
         salesFilters.addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON') {
                 state.salesFilterType = e.target.dataset.filter;
                 salesFilters.querySelectorAll('button').forEach(btn => btn.classList.remove('bg-blue-500', 'text-white'));
                 e.target.classList.add('bg-blue-500', 'text-white');
+                state.currentPage = 1;
                 renderSalesHistory();
             }
         });
@@ -255,17 +165,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchBar.addEventListener('input', (e) => {
             state.searchQuery = e.target.value.trim();
             state.currentPage = 1;
-            if (state.activeView === 'sales') {
-                renderSalesHistory();
-            } else {
-                renderPurchaseHistory();
-            }
+            renderSalesHistory();
         });
 
         if(closeDetailModalBtn) closeDetailModalBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
         if(closeDetailModalBtnFooter) closeDetailModalBtnFooter.addEventListener('click', () => detailModal.classList.add('hidden'));
 
-        // --- Logic cho việc xóa lịch sử ---
+        // --- Logic for deleting history ---
         deleteHistoryBtn.addEventListener('click', () => {
             deleteHistoryModal.classList.remove('hidden');
         });
@@ -284,23 +190,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (deleteConfirmInput.value.toLowerCase() !== 'delete') return;
 
             try {
+                // Now only deletes orders, but keeps the prompt general
                 await db.overwriteStore(db.STORES.orders, []);
-                await db.overwriteStore(db.STORES.purchases, []);
+                await db.overwriteStore(db.STORES.purchases, []); // Keep this to clear both stores
                 state.orders = [];
-                state.purchases = [];
-                renderActiveView();
+                renderSalesHistory();
                 cancelDeleteBtn.click();
                 alert('Đã xóa toàn bộ lịch sử giao dịch thành công!');
             } catch (error) {
-                console.error("Lỗi khi xóa lịch sử:", error);
+                console.error("Error deleting history:", error);
                 alert('Đã có lỗi xảy ra khi xóa lịch sử.');
             }
         });
 
-        renderActiveView(); // Render lần đầu
+        renderSalesHistory(); // Initial render
     };
 
-    // --- Logic xuất/nhập dữ liệu ---
+    // --- Export/Import Logic (unchanged) ---
     const exportAllBtn = document.getElementById('export-all-btn');
     const importAllBtn = document.getElementById('import-all-btn');
     const importAllInput = document.getElementById('import-all-input');
@@ -401,58 +307,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     init();
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then((reg) => {
-            console.log('Service worker registered successfully.', reg);
-          }).catch((err) => {
-            console.log('Service worker registration failed: ', err);
-          });
-      });
-    }
 });
-// --- LOGIC KIỂM TRA VÀ THÔNG BÁO CẬP NHẬT ---
-(() => {
-    let newWorker;
-
-    function showUpdateBar() {
-        let toast = document.getElementById('update-toast');
-        if (!toast) {
-            toast = document.createElement('div');
-            toast.id = 'update-toast';
-            toast.innerHTML = `
-                <span>Có phiên bản mới.</span>
-                <button id="reload-button" class="ml-4 font-bold underline">Cập nhật ngay</button>
-            `;
-            document.body.appendChild(toast);
-
-            document.getElementById('reload-button').addEventListener('click', () => {
-                newWorker.postMessage({ action: 'skipWaiting' });
-            });
-        }
-        // Thêm class để kích hoạt animation
-        toast.classList.add('show');
-    }
-
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
-            reg.addEventListener('updatefound', () => {
-                newWorker = reg.installing;
-                newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        showUpdateBar();
-                    }
-                });
-            });
-        });
-
-        let refreshing;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (refreshing) return;
-            window.location.reload();
-            refreshing = true;
-        });
-    }
-})();

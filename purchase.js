@@ -8,15 +8,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         purchaseTabs: [],
         activePurchaseId: 1,
         nextPurchaseId: 2,
+        filterBySupplier: false,
+        
+        activeOverlayTab: 'purchases', // Default to purchase history
         supplierListSearchQuery: '',
+        purchaseHistory: {
+            searchQuery: '',
+            currentPage: 1,
+            rowsPerPage: 30,
+            sortDirection: 'desc'
+        }
     };
 
     // --- DOM ELEMENTS ---
-    const supplierPageOverlay = document.getElementById('supplier-page-overlay');
-    const showSupplierListBtn = document.getElementById('show-supplier-list-btn');
+    const historyOverlay = document.getElementById('history-overlay');
+    const showHistoryOverlayBtn = document.getElementById('show-history-overlay-btn');
     const backToPurchaseBtn = document.getElementById('back-to-purchase-btn');
 
-    // Purchase creation elements
     const productSearchInput = document.getElementById('product-search');
     const autocompleteResultsContainer = document.getElementById('autocomplete-results');
     const currentPurchaseItemsContainer = document.getElementById('current-purchase-items');
@@ -27,20 +35,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     const summaryItemCountEl = document.getElementById('summary-item-count');
     const purchaseTabsContainer = document.getElementById('purchase-tabs-container');
     const newPurchaseBtn = document.getElementById('new-purchase-btn');
+    const supplierProductToggle = document.getElementById('supplier-product-toggle');
 
-    // Quick Add Supplier Modal
     const quickSupplierModal = document.getElementById('quick-supplier-modal');
     const quickAddSupplierBtn = document.getElementById('quick-add-supplier-btn');
     const closeQuickSupplierModalBtn = document.getElementById('close-quick-supplier-modal-btn');
     const saveQuickSupplierBtn = document.getElementById('save-quick-supplier-btn');
     const quickSupplierNameInput = document.getElementById('quick-supplier-name');
     
-    // Supplier list elements
+    const overlayTabs = document.getElementById('overlay-tabs');
+    const supplierListView = document.getElementById('supplier-list-view');
+    const purchaseHistoryView = document.getElementById('purchase-history-view');
+    
     const supplierListTableBody = document.getElementById('supplier-list-table-body');
     const supplierListSearchBar = document.getElementById('supplier-list-search-bar');
     const addNewSupplierBtn = document.getElementById('add-new-supplier-btn');
 
-    // Supplier edit modal elements
+    const purchaseHistoryTableHead = document.getElementById('purchase-history-table-head');
+    const purchaseHistoryTableBody = document.getElementById('purchase-history-table-body');
+    const purchaseHistorySearchBar = document.getElementById('purchase-history-search-bar');
+    const purchaseHistoryPagination = document.getElementById('purchase-history-pagination');
+
     const supplierEditModal = document.getElementById('supplier-edit-modal');
     const supplierEditModalTitle = document.getElementById('supplier-edit-modal-title');
     const supplierEditIdHidden = document.getElementById('supplier-edit-id-hidden');
@@ -78,8 +93,84 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // --- FORMATTING ---
     const formatNumber = (value) => new Intl.NumberFormat('vi-VN').format(value || 0);
+    const formatCurrency = (value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(value) || 0);
+    const formatDateTime = (isoString) => new Date(isoString).toLocaleString('vi-VN');
+    const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+
 
     // --- RENDER FUNCTIONS ---
+    
+    const renderPurchaseHistoryPagination = (totalItems) => {
+        purchaseHistoryPagination.innerHTML = '';
+        const totalPages = Math.ceil(totalItems / state.purchaseHistory.rowsPerPage);
+        if (totalPages <= 1) return;
+        const createBtn = (text, page, disabled = false, active = false) => {
+            const btn = document.createElement('button');
+            btn.innerHTML = text;
+            btn.className = `px-3 py-1 rounded-md ${active ? 'bg-blue-600 text-white' : 'bg-gray-200'} ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-300'}`;
+            btn.disabled = disabled;
+            if (!disabled) {
+                btn.onclick = () => {
+                    state.purchaseHistory.currentPage = page;
+                    renderPurchaseHistory();
+                };
+            }
+            return btn;
+        };
+        purchaseHistoryPagination.appendChild(createBtn('«', state.purchaseHistory.currentPage - 1, state.purchaseHistory.currentPage === 1));
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || Math.abs(i - state.purchaseHistory.currentPage) <= 2) {
+                purchaseHistoryPagination.appendChild(createBtn(i, i, false, i === state.purchaseHistory.currentPage));
+            } else if (purchaseHistoryPagination.lastChild.textContent !== '...' && ((i < state.purchaseHistory.currentPage && i === 2) || (i > state.purchaseHistory.currentPage && i === totalPages - 1))) {
+                purchaseHistoryPagination.appendChild(document.createTextNode('...'));
+            }
+        }
+        purchaseHistoryPagination.appendChild(createBtn('»', state.purchaseHistory.currentPage + 1, state.purchaseHistory.currentPage === totalPages));
+    };
+
+    const renderPurchaseHistory = () => {
+        purchaseHistoryTableHead.innerHTML = `
+            <tr>
+                <th class="px-6 py-3">ID Phiếu Nhập</th>
+                <th class="px-6 py-3">Nhà Cung Cấp</th>
+                <th id="sort-purchase-by-date" class="px-6 py-3 cursor-pointer hover:bg-gray-100">Ngày Nhập <i class="fas fa-sort-down ml-1"></i></th>
+                <th class="px-6 py-3 text-right">Tổng Tiền</th>
+                <th class="px-6 py-3">Thao Tác</th>
+            </tr>
+        `;
+        let filtered = state.allPurchases;
+        if (state.purchaseHistory.searchQuery) {
+            const query = removeDiacritics(state.purchaseHistory.searchQuery.toLowerCase());
+            filtered = filtered.filter(p => p.id.toLowerCase().includes(query) || (p.supplierName && removeDiacritics(p.supplierName.toLowerCase()).includes(query)));
+        }
+        filtered.sort((a, b) => state.purchaseHistory.sortDirection === 'asc' ? new Date(a.date) - new Date(b.date) : new Date(b.date) - new Date(a.date));
+        const start = (state.purchaseHistory.currentPage - 1) * state.purchaseHistory.rowsPerPage;
+        const end = start + state.purchaseHistory.rowsPerPage;
+        const paginated = filtered.slice(start, end);
+        purchaseHistoryTableBody.innerHTML = paginated.map(p => `
+            <tr class="bg-white border-b hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium">${p.id}</td>
+                <td class="px-6 py-4">${p.supplierName || 'N/A'}</td>
+                <td class="px-6 py-4">${formatDateTime(p.date)}</td>
+                <td class="px-6 py-4 font-semibold text-right">${formatCurrency(p.total)}</td>
+                <td class="px-6 py-4 text-left whitespace-nowrap">
+                    <button class="text-blue-500 hover:underline" onclick="app.viewPurchaseDetails('${p.id}')">Xem</button>
+                    <button class="text-green-600 hover:underline ml-2" onclick="app.editPurchase('${p.id}')">Sửa</button>
+                    <button class="text-red-600 hover:underline ml-2" onclick="app.deletePurchase('${p.id}')">Xóa</button>
+                </td>
+            </tr>
+        `).join('');
+        renderPurchaseHistoryPagination(filtered.length);
+
+        const sortByDateBtn = document.getElementById('sort-purchase-by-date');
+        if (sortByDateBtn) {
+            sortByDateBtn.onclick = () => {
+                state.purchaseHistory.sortDirection = state.purchaseHistory.sortDirection === 'desc' ? 'asc' : 'desc';
+                renderPurchaseHistory();
+            };
+        }
+    };
+
     const updatePurchaseSummary = () => {
         const activePurchase = getActivePurchase();
         if (!activePurchase) return;
@@ -186,7 +277,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         let filteredSuppliers = state.suppliers;
         const query = state.supplierListSearchQuery.toLowerCase().trim();
         if (query) {
-            const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
             const normalizedQuery = removeDiacritics(query);
             filteredSuppliers = state.suppliers.filter(s => removeDiacritics(s.name.toLowerCase()).includes(normalizedQuery));
         }
@@ -228,10 +318,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const existingItem = activePurchase.items.find(item => item.id === productId);
             if (existingItem) existingItem.quantity++;
             else {
-                activePurchase.items.push({
-                    id: product.id, name: product.name,
-                    importPrice: product.importPrice || 0, quantity: 1,
-                });
+                activePurchase.items.push({ id: product.id, name: product.name, importPrice: product.importPrice || 0, quantity: 1 });
             }
             renderCurrentPurchaseItems();
         },
@@ -253,22 +340,68 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert('Đã xóa nhà cung cấp.');
             }
         },
+        viewPurchaseDetails: (purchaseId) => { window.location.href = `purchase-detail.html?id=${purchaseId}`; },
+        editPurchase: (purchaseId) => { window.location.href = `purchase.html?edit=${purchaseId}`; },
+        deletePurchase: async (purchaseId) => {
+            if (confirm('Bạn có chắc chắn muốn xóa phiếu nhập này? Thao tác này không thể hoàn tác.')) {
+                try {
+                    await db.deletePurchase(purchaseId);
+                    state.allPurchases = state.allPurchases.filter(p => p.id !== purchaseId);
+                    renderPurchaseHistory();
+                    alert('Đã xóa phiếu nhập thành công!');
+                } catch (error) {
+                    console.error("Lỗi khi xóa phiếu nhập:", error);
+                    alert('Đã xảy ra lỗi khi xóa phiếu nhập.');
+                }
+            }
+        }
     };
     
-    // View Toggling Logic
-    showSupplierListBtn.addEventListener('click', () => {
-        supplierPageOverlay.classList.remove('hidden');
-        renderSupplierListTable();
+    showHistoryOverlayBtn.addEventListener('click', () => {
+        historyOverlay.classList.remove('hidden');
+        if(state.activeOverlayTab === 'suppliers') {
+            renderSupplierListTable();
+        } else {
+            renderPurchaseHistory();
+        }
     });
 
     backToPurchaseBtn.addEventListener('click', () => {
-        supplierPageOverlay.classList.add('hidden');
+        historyOverlay.classList.add('hidden');
     });
 
-    // Supplier List Event Listeners
+    overlayTabs.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'BUTTON') return;
+        const view = e.target.dataset.view;
+        state.activeOverlayTab = view;
+        overlayTabs.querySelectorAll('button').forEach(btn => {
+            btn.classList.remove('border-blue-500', 'text-blue-600');
+            btn.classList.add('border-transparent', 'text-gray-500');
+        });
+        e.target.classList.add('border-blue-500', 'text-blue-600');
+        e.target.classList.remove('border-transparent', 'text-gray-500');
+        if (view === 'suppliers') {
+            supplierListView.classList.remove('hidden');
+            purchaseHistoryView.classList.add('hidden');
+            addNewSupplierBtn.classList.remove('hidden');
+            renderSupplierListTable();
+        } else {
+            supplierListView.classList.add('hidden');
+            purchaseHistoryView.classList.remove('hidden');
+            addNewSupplierBtn.classList.add('hidden');
+            renderPurchaseHistory();
+        }
+    });
+
     supplierListSearchBar.addEventListener('input', (e) => {
         state.supplierListSearchQuery = e.target.value;
         renderSupplierListTable();
+    });
+    
+    purchaseHistorySearchBar.addEventListener('input', (e) => {
+        state.purchaseHistory.searchQuery = e.target.value;
+        state.purchaseHistory.currentPage = 1;
+        renderPurchaseHistory();
     });
 
     addNewSupplierBtn.addEventListener('click', () => openSupplierEditModal());
@@ -295,34 +428,62 @@ document.addEventListener('DOMContentLoaded', async () => {
         closeSupplierEditModal();
     });
 
-    // Purchase Creation Event Listeners
-    newPurchaseBtn.addEventListener('click', () => {
-        const newPurchase = { id: state.nextPurchaseId++, items: [], supplierName: '', total: 0, originalPurchaseId: null };
-        state.purchaseTabs.push(newPurchase);
-        state.activePurchaseId = newPurchase.id;
-        renderActivePurchaseUI();
+    supplierProductToggle.addEventListener('change', (e) => {
+        state.filterBySupplier = e.target.checked;
+        productSearchInput.value = '';
+        autocompleteResultsContainer.classList.add('hidden');
+        productSearchInput.focus();
     });
 
-    productSearchInput.addEventListener('input', (e) => {
-        const rawQuery = e.target.value.trim();
-        if (!rawQuery) {
+    const handleProductSearch = () => {
+        const rawQuery = productSearchInput.value.trim();
+        
+        let sourceProducts = state.products;
+        let showEvenIfEmpty = false;
+
+        if (state.filterBySupplier) {
+            showEvenIfEmpty = true;
+            const activePurchase = getActivePurchase();
+            const supplierName = activePurchase ? activePurchase.supplierName.trim() : '';
+            if (supplierName) {
+                const supplier = state.suppliers.find(s => s.name === supplierName);
+                if (supplier && supplier.productIds && supplier.productIds.length > 0) {
+                    const supplierProductIds = new Set(supplier.productIds);
+                    sourceProducts = state.products.filter(p => supplierProductIds.has(p.id));
+                } else {
+                    sourceProducts = []; 
+                }
+            } else {
+                sourceProducts = [];
+            }
+        }
+
+        if (!rawQuery && !showEvenIfEmpty) {
             autocompleteResultsContainer.classList.add('hidden');
             return;
         }
-        const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
-        const normalizedQuery = removeDiacritics(rawQuery.toLowerCase());
-        const keywords = normalizedQuery.split(/\s+/).filter(Boolean);
-        const results = state.products.filter(p => {
-            const normalizedName = removeDiacritics(p.name.toLowerCase());
-            return keywords.every(kw => normalizedName.includes(kw) || String(p.id).toLowerCase().includes(kw));
-        });
-        renderAutocompleteResults(results.slice(0, 10), autocompleteResultsContainer, (product) => {
+
+        let results = sourceProducts;
+        if (rawQuery) {
+            const normalizedQuery = removeDiacritics(rawQuery.toLowerCase());
+            const keywords = normalizedQuery.split(/\s+/).filter(Boolean);
+            results = sourceProducts.filter(p => {
+                const normalizedName = removeDiacritics(p.name.toLowerCase());
+                return keywords.every(kw => normalizedName.includes(kw) || String(p.id).toLowerCase().includes(kw));
+            });
+        }
+        
+        renderAutocompleteResults(results, autocompleteResultsContainer, (product) => {
             app.addToPurchase(product.id);
             productSearchInput.value = '';
             autocompleteResultsContainer.classList.add('hidden');
         });
         autocompleteResultsContainer.classList.remove('hidden');
-    });
+    }
+
+    productSearchInput.addEventListener('input', handleProductSearch);
+    productSearchInput.addEventListener('focus', handleProductSearch);
+
 
     const selectSupplier = (supplier) => {
         const activePurchase = getActivePurchase();
@@ -352,7 +513,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             supplierAutocompleteResults.classList.remove('hidden');
             return;
         }
-        const removeDiacritics = (str) => str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
         const normalizedQuery = removeDiacritics(query);
         const keywords = normalizedQuery.split(/\s+/).filter(Boolean);
         const results = state.suppliers.filter(s => {
@@ -405,13 +565,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // --- SỬA ĐỔI TẠI ĐÂY ---
     savePurchaseBtn.addEventListener('click', async () => {
         const activePurchase = getActivePurchase();
         if (!activePurchase || activePurchase.items.length === 0) return;
+        
+        const supplierName = activePurchase.supplierName.trim();
+        if (supplierName) {
+            const supplier = state.suppliers.find(s => s.name.toLowerCase() === supplierName.toLowerCase());
+            if (supplier) {
+                const productIdsInPurchase = activePurchase.items.map(item => item.id);
+                if (!supplier.productIds) supplier.productIds = [];
+                const updatedProductIds = new Set([...supplier.productIds, ...productIdsInPurchase]);
+                supplier.productIds = Array.from(updatedProductIds);
+                await db.updateSupplier(supplier);
+            }
+        }
 
         let savedPurchase;
-
         if (activePurchase.originalPurchaseId) {
             const purchaseToUpdate = state.allPurchases.find(p => p.id === activePurchase.originalPurchaseId);
             if (purchaseToUpdate) {
@@ -424,7 +594,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert(`Đã cập nhật thành công phiếu nhập: ${savedPurchase.id}`);
             } else {
                 alert(`Không tìm thấy phiếu nhập gốc để cập nhật.`);
-                return; // Dừng lại nếu không tìm thấy phiếu gốc
+                return;
             }
         } else {
             const newPurchase = {
@@ -437,11 +607,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             await db.addPurchase(newPurchase);
             savedPurchase = newPurchase;
         }
-
-        // Sau khi lưu thành công (cả mới và cũ), đóng tab hiện tại
         closePurchaseTab(activePurchase.id);
-
-        // Chuyển hướng đến trang chi tiết
         if (savedPurchase) {
             window.location.href = `purchase-detail.html?id=${savedPurchase.id}`;
         }
@@ -465,7 +631,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert(`Tên nhà cung cấp "${name}" đã tồn tại. Vui lòng nhập tên khác.`);
             return;
         }
-        const newSupplier = { id: `NCC-${Date.now()}`, name };
+        const newSupplier = { id: `NCC-${Date.now()}`, name, productIds: [] };
         await db.addSupplier(newSupplier);
         state.suppliers.push(newSupplier);
         const activePurchase = getActivePurchase();
@@ -477,12 +643,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         alert(`Đã thêm NCC mới: ${name}`);
     });
 
+    newPurchaseBtn.addEventListener('click', () => {
+        const newPurchase = { id: state.nextPurchaseId++, items: [], supplierName: '', total: 0, originalPurchaseId: null };
+        state.purchaseTabs.push(newPurchase);
+        state.activePurchaseId = newPurchase.id;
+        renderActivePurchaseUI();
+    });
+
     // --- INITIALIZATION ---
     const init = async () => {
         await loadData();
+        
         const urlParams = new URLSearchParams(window.location.search);
         const purchaseIdToEdit = urlParams.get('edit');
-        if (purchaseIdToEdit) {
+        const purchaseIdToClone = urlParams.get('clone');
+
+        if (purchaseIdToClone) {
+            const purchaseToClone = state.allPurchases.find(p => p.id === purchaseIdToClone);
+            if (purchaseToClone) {
+                const newPurchaseTab = {
+                    id: state.nextPurchaseId++,
+                    items: JSON.parse(JSON.stringify(purchaseToClone.items)),
+                    supplierName: purchaseToClone.supplierName,
+                    total: purchaseToClone.total,
+                    originalPurchaseId: null // Quan trọng: Đây là phiếu mới, không phải sửa
+                };
+                state.purchaseTabs.push(newPurchaseTab);
+                state.activePurchaseId = newPurchaseTab.id;
+            }
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+        } else if (purchaseIdToEdit) { 
             const purchaseToEdit = state.allPurchases.find(p => p.id === purchaseIdToEdit);
             if (purchaseToEdit) {
                 const existingTab = state.purchaseTabs.find(p => p.originalPurchaseId === purchaseIdToEdit);
@@ -502,63 +693,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             window.history.replaceState({}, document.title, window.location.pathname);
         }
+        
         renderActivePurchaseUI();
     };
 
     init();
-
-    // --- ĐĂNG KÝ SERVICE WORKER ---
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then((reg) => {
-            console.log('Service worker registered successfully.', reg);
-          }).catch((err) => {
-            console.log('Service worker registration failed: ', err);
-          });
-      });
-    }
 });
-// --- LOGIC KIỂM TRA VÀ THÔNG BÁO CẬP NHẬT ---
-(() => {
-    let newWorker;
 
-    function showUpdateBar() {
-        let toast = document.getElementById('update-toast');
-        if (!toast) {
-            toast = document.createElement('div');
-            toast.id = 'update-toast';
-            toast.innerHTML = `
-                <span>Có phiên bản mới.</span>
-                <button id="reload-button" class="ml-4 font-bold underline">Cập nhật ngay</button>
-            `;
-            document.body.appendChild(toast);
-
-            document.getElementById('reload-button').addEventListener('click', () => {
-                newWorker.postMessage({ action: 'skipWaiting' });
-            });
-        }
-        // Thêm class để kích hoạt animation
-        toast.classList.add('show');
-    }
-
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
-            reg.addEventListener('updatefound', () => {
-                newWorker = reg.installing;
-                newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        showUpdateBar();
-                    }
-                });
-            });
-        });
-
-        let refreshing;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (refreshing) return;
-            window.location.reload();
-            refreshing = true;
-        });
-    }
-})();
