@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const printBtn = document.getElementById('print-btn');
     const backBtnHeader = document.getElementById('back-btn-header');
     const closeBtnFooter = document.getElementById('close-btn-footer');
+    const cloneBtn = document.getElementById('clone-btn');
 
     // --- LOGIC NÚT QUAY LẠI ---
     const goBack = (event) => {
@@ -13,8 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     backBtnHeader.addEventListener('click', goBack);
-    closeBtnFooter.addEventListener('click', goBack);
-    // --- KẾT THÚC LOGIC NÚT QUAY LẠI ---
+    // Nút "Đóng" bây giờ là một thẻ <a> trỏ trực tiếp đến purchase.html, không cần JS.
 
     const formatCurrency = (value) => {
         const numValue = Number(value);
@@ -28,6 +28,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!purchaseId) {
         purchaseContentEl.innerHTML = '<p class="text-red-500 text-center">Không tìm thấy ID phiếu nhập.</p>';
         return;
+    }
+
+    // --- LOGIC NÚT SAO CHÉP ---
+    if (cloneBtn) {
+        cloneBtn.addEventListener('click', () => {
+            if(purchaseId){
+                window.location.href = `purchase.html?clone=${purchaseId}`;
+            }
+        });
     }
 
     const allPurchases = await db.getAllPurchases();
