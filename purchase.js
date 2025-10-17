@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         nextPurchaseId: 2,
         filterBySupplier: false,
         
-        activeOverlayTab: 'purchases', // Default to purchase history
+        activeOverlayTab: 'purchases', 
         supplierListSearchQuery: '',
         purchaseHistory: {
             searchQuery: '',
@@ -43,6 +43,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const saveQuickSupplierBtn = document.getElementById('save-quick-supplier-btn');
     const quickSupplierNameInput = document.getElementById('quick-supplier-name');
     
+    // Quick Add Product Elements
+    const quickAddProductBtn = document.getElementById('quick-add-product-btn');
+    const quickProductModal = document.getElementById('quick-product-modal');
+    const closeQuickProductModalBtn = document.getElementById('close-quick-product-modal-btn');
+    const saveQuickProductBtn = document.getElementById('save-quick-product-btn');
+    const quickProductNameInput = document.getElementById('quick-product-name');
+    const quickProductImportPriceInput = document.getElementById('quick-product-import-price');
+
     const overlayTabs = document.getElementById('overlay-tabs');
     const supplierListView = document.getElementById('supplier-list-view');
     const purchaseHistoryView = document.getElementById('purchase-history-view');
@@ -649,6 +657,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         state.activePurchaseId = newPurchase.id;
         renderActivePurchaseUI();
     });
+    
+    // --- QUICK ADD PRODUCT LOGIC ---
+    const formatNumberInput = (e) => {
+        const input = e.target;
+        let value = input.value.replace(/\D/g, '');
+        input.value = value ? new Intl.NumberFormat('vi-VN').format(value) : '';
+    };
+    quickProductImportPriceInput.addEventListener('input', formatNumberInput);
+
+    quickAddProductBtn.addEventListener('click', () => {
+        quickProductNameInput.value = productSearchInput.value.trim();
+        quickProductModal.classList.remove('hidden');
+        quickProductNameInput.focus();
+    });
+
+    closeQuickProductModalBtn.addEventListener('click', () => {
+        quickProductModal.classList.add('hidden');
+    });
+
+    saveQuickProductBtn.addEventListener('click', async () => {
+        const name = quickProductNameInput.value.trim();
+        if (!name) {
+            alert('Tên sản phẩm không được để trống.');
+            return;
+        }
+
+        const importPrice = parseFloat(quickProductImportPriceInput.value.replace(/\./g, '')) || 0;
+
+        const newProduct = {
+            id: Date.now().toString(),
+            name: name,
+            unit: 'Cái', 
+            importPrice: importPrice,
+            wholesalePrice: 0,
+            retailPrice: 0,
+        };
+
+        await db.addProduct(newProduct);
+        state.products.push(newProduct);
+        app.addToPurchase(newProduct.id);
+
+        quickProductModal.classList.add('hidden');
+        document.getElementById('quick-product-form').reset();
+        
+        alert(`Đã thêm sản phẩm "${name}" và đưa vào phiếu nhập.`);
+    });
+
 
     // --- INITIALIZATION ---
     const init = async () => {
@@ -666,7 +721,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     items: JSON.parse(JSON.stringify(purchaseToClone.items)),
                     supplierName: purchaseToClone.supplierName,
                     total: purchaseToClone.total,
-                    originalPurchaseId: null // Quan trọng: Đây là phiếu mới, không phải sửa
+                    originalPurchaseId: null 
                 };
                 state.purchaseTabs.push(newPurchaseTab);
                 state.activePurchaseId = newPurchaseTab.id;

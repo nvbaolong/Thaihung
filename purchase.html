@@ -46,12 +46,12 @@
                          <div class="flex justify-between items-center mb-4">
                             <h3 class="text-xl font-bold text-gray-900">Thông tin phiếu nhập</h3>
                             <div class="flex items-center">
-                                <span id="toggle-label-all" class="mr-3 text-sm font-medium text-gray-900">Tất cả HH</span>
+                                <span class="mr-3 text-sm font-medium text-gray-900">Tất cả HH</span>
                                 <label for="supplier-product-toggle" class="inline-flex relative items-center cursor-pointer">
                                     <input type="checkbox" id="supplier-product-toggle" class="sr-only peer">
                                     <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                 </label>
-                                <span id="toggle-label-supplier" class="ml-3 text-sm font-medium text-gray-900">HH của NCC</span>
+                                <span class="ml-3 text-sm font-medium text-gray-900">HH của NCC</span>
                             </div>
                          </div>
                          
@@ -67,12 +67,15 @@
                              </div>
                          </div>
 
-                         <div class="relative mb-4">
-                            <label for="product-search" class="sr-only">Tìm sản phẩm</label>
-                            <i class="fas fa-search absolute left-3 top-3 text-gray-400 pointer-events-none"></i>
-                            <input type="text" id="product-search" placeholder="Nhập tên hoặc mã sản phẩm để thêm vào phiếu..." class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <div id="autocomplete-results" class="absolute z-20 w-full bg-white border rounded-lg mt-1 max-h-60 overflow-y-auto hidden shadow-lg"></div>
-                         </div>
+                        <div class="flex items-center space-x-2 mb-4">
+                            <div class="relative flex-grow">
+                                <label for="product-search" class="sr-only">Tìm sản phẩm</label>
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400 pointer-events-none"></i>
+                                <input type="text" id="product-search" placeholder="Nhập tên hoặc mã sản phẩm để thêm vào phiếu..." class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <div id="autocomplete-results" class="absolute z-20 w-full bg-white border rounded-lg mt-1 max-h-60 overflow-y-auto hidden shadow-lg"></div>
+                            </div>
+                            <button id="quick-add-product-btn" class="flex-shrink-0 bg-green-500 text-white px-3 py-2 rounded-lg font-semibold hover:bg-green-600"><i class="fas fa-plus"></i></button>
+                        </div>
 
                          <div class="flex-grow min-h-[300px] max-h-[50vh] overflow-y-auto">
                             <div id="current-purchase-items">
@@ -117,49 +120,43 @@
                 <button id="back-to-purchase-btn" class="text-gray-600 hover:text-blue-500 text-2xl">
                     <i class="fas fa-arrow-circle-left"></i>
                 </button>
-                <h2 class="text-2xl font-semibold text-gray-900">Lịch sử & NCC</h2>
+                 <div id="overlay-tabs" class="flex items-center space-x-1 border-b">
+                    <button data-view="purchases" class="view-tab px-4 py-2 text-sm font-semibold border-b-2 border-blue-500 text-blue-600">Lịch Sử Nhập Hàng</button>
+                    <button data-view="suppliers" class="view-tab px-4 py-2 text-sm font-semibold border-transparent text-gray-500 hover:text-gray-700">Danh Sách NCC</button>
+                </div>
             </div>
-            <div id="overlay-tabs" class="flex items-center space-x-1 absolute left-1/2 -translate-x-1/2">
-                <button data-view="purchases" class="px-4 py-2 text-sm font-semibold border-b-2 border-blue-500 text-blue-600">Lịch sử nhập hàng</button>
-                <button data-view="suppliers" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-gray-700">Danh sách NCC</button>
-            </div>
-            <button id="add-new-supplier-btn" class="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 hidden">
+             <button id="add-new-supplier-btn" class="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 hidden">
                 <i class="fas fa-plus mr-2"></i>Thêm Mới
             </button>
         </header>
         <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-            <div id="supplier-list-view" class="hidden">
-                 <div class="bg-white p-6 rounded-lg shadow-md max-w-5xl mx-auto">
-                    <div class="mb-4">
-                        <input type="text" id="supplier-list-search-bar" placeholder="Tìm kiếm theo tên nhà cung cấp..." class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead class="uppercase bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3">ID</th>
-                                    <th class="px-6 py-3">Tên Nhà Cung Cấp</th>
-                                    <th class="px-6 py-3 text-center">Thao Tác</th>
-                                </tr>
-                            </thead>
-                            <tbody id="supplier-list-table-body">
-                                </tbody>
-                        </table>
-                    </div>
+            <div id="purchase-history-view" class="bg-white p-6 rounded-lg shadow-md max-w-7xl mx-auto">
+                 <div class="w-full sm:w-1/3 mb-4">
+                    <input type="text" id="purchase-history-search-bar" placeholder="Tìm theo ID, tên NCC..." class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead id="purchase-history-table-head" class="uppercase bg-gray-50"></thead>
+                        <tbody id="purchase-history-table-body"></tbody>
+                    </table>
+                </div>
+                <div id="purchase-history-pagination" class="flex justify-center items-center mt-4 space-x-2"></div>
             </div>
-            <div id="purchase-history-view">
-                <div class="bg-white p-6 rounded-lg shadow-md max-w-7xl mx-auto">
-                    <div class="w-full mb-4">
-                        <input type="text" id="purchase-history-search-bar" placeholder="Tìm theo ID phiếu nhập, tên nhà cung cấp..." class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead id="purchase-history-table-head" class="uppercase bg-gray-50"></thead>
-                            <tbody id="purchase-history-table-body"></tbody>
-                        </table>
-                    </div>
-                    <div id="purchase-history-pagination" class="flex justify-center items-center mt-4 space-x-2"></div>
+             <div id="supplier-list-view" class="bg-white p-6 rounded-lg shadow-md max-w-5xl mx-auto hidden">
+                <div class="mb-4">
+                    <input type="text" id="supplier-list-search-bar" placeholder="Tìm kiếm theo tên nhà cung cấp..." class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="uppercase bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3">ID</th>
+                                <th class="px-6 py-3">Tên Nhà Cung Cấp</th>
+                                <th class="px-6 py-3 text-center">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="supplier-list-table-body"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -183,6 +180,28 @@
         </div>
     </div>
     
+    <div id="quick-product-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Thêm Nhanh Sản Phẩm</h3>
+                <form id="quick-product-form" class="mt-2 px-7 py-3 space-y-4 text-left">
+                    <div>
+                        <label for="quick-product-name" class="block text-sm font-medium text-gray-700">Tên sản phẩm:</label>
+                        <input type="text" id="quick-product-name" class="mt-1 w-full px-3 py-2 border rounded-lg" required>
+                    </div>
+                    <div>
+                        <label for="quick-product-import-price" class="block text-sm font-medium text-gray-700">Giá nhập:</label>
+                        <input type="text" id="quick-product-import-price" placeholder="0" class="mt-1 w-full px-3 py-2 border rounded-lg text-right">
+                    </div>
+                </form>
+                <div class="items-center px-4 py-3">
+                    <button id="save-quick-product-btn" class="px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-auto shadow-sm hover:bg-green-600">Thêm</button>
+                    <button id="close-quick-product-modal-btn" class="px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-auto shadow-sm hover:bg-gray-400 ml-2">Hủy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="supplier-edit-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
         <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
             <div class="mt-3 text-center">
