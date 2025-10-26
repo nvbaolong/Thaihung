@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let state = {
         orders: [],
-        // REMOVED: purchases state is no longer needed here
         searchQuery: '',
         salesFilterType: 'all',
         currentPage: 1,
@@ -119,6 +118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <td class="px-6 py-4 text-left whitespace-nowrap">
                         <button class="text-blue-500 hover:underline" onclick="app.viewOrderDetails('${order.id}')" ${isPayment ? 'disabled' : ''}>${isPayment ? 'Thanh toán' : 'Xem'}</button>
                         <button class="text-green-600 hover:underline ml-2" onclick="app.editOrder('${order.id}')" ${isPayment ? 'disabled style="display:none;"' : ''}>Sửa</button>
+                        <button class="text-red-600 hover:underline ml-2" onclick="app.deleteOrder('${order.id}')">Xóa</button>
                     </td>
                 </tr>
             `;
@@ -144,13 +144,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         viewOrderDetails: (orderId) => {
             window.location.href = `order-detail.html?id=${orderId}`;
         },
-        // REMOVED: purchase-related functions are moved to purchase.js
+        // THAY ĐỔI: ĐÃ THÊM HÀM XÓA HÓA ĐƠN
+        deleteOrder: async (orderId) => {
+            const orderToDelete = state.orders.find(o => o.id === orderId);
+            let confirmMessage = 'Bạn có chắc chắn muốn xóa hóa đơn này?';
+            if (orderToDelete) {
+                confirmMessage = `Bạn có chắc chắn muốn xóa hóa đơn "${orderToDelete.id}" (Khách: ${orderToDelete.customerName || 'Khách Lẻ'})?\n\nThao tác này không thể hoàn tác!`;
+            }
+            
+            if (confirm(confirmMessage)) {
+                try {
+                    await db.deleteOrder(orderId); // Xóa khỏi DB
+                    state.orders = state.orders.filter(o => o.id !== orderId); // Xóa khỏi state
+                    renderSalesHistory(); // Vẽ lại bảng
+                    alert('Đã xóa hóa đơn thành công!');
+                } catch (error) {
+                    console.error("Lỗi khi xóa hóa đơn:", error);
+                    alert('Đã xảy ra lỗi khi xóa hóa đơn.');
+                }
+            }
+        }
     };
 
     // --- INITIALIZATION ---
     const init = async () => {
         state.orders = await db.getAllOrders();
-        // REMOVED: No longer need to fetch purchases here
 
         salesFilters.addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON') {
@@ -278,7 +296,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 await db.overwriteStore(db.STORES.products, products);
                 await db.overwriteStore(db.STORES.orders, orders);
-                await db.overwriteStore(db.STORES.customers, customers);
+                await db.overwriteStore(D.STORES.customers, customers);
                 await db.overwriteStore(db.STORES.purchases, purchases);
                 await db.overwriteStore(db.STORES.suppliers, suppliers);
                 
