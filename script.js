@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Thay đổi 1: Ch
 
     // Helper function to remove Vietnamese diacritics
     const removeDiacritics = (str) => {
-      return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
     };
 
     const defaultProducts = [
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Thay đổi 1: Ch
             }
             state.products = await db.getAllProducts(); // Tải lại danh sách sản phẩm
         }
-        
+
         // Tải trạng thái UI từ localStorage (vẫn giữ lại cho tiện)
         const uiStateData = localStorage.getItem('salesDashboardUiState');
         if (uiStateData) {
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Thay đổi 1: Ch
             state.nextInvoiceId = 2;
         }
     };
-    
+
     // --- Các hàm tính toán và định dạng (giữ nguyên) ---
     const formatCurrency = (value) => {
         const numValue = Number(value);
@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Thay đổi 1: Ch
 
         const total = activeInvoice.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         let paidAmount;
-        
+
         if (activeInvoice.priceType === 'retail') {
             paidAmount = total;
             amountPaidInput.value = new Intl.NumberFormat('vi-VN').format(total);
@@ -143,11 +143,11 @@ document.addEventListener('DOMContentLoaded', async () => { // Thay đổi 1: Ch
         }
 
         const debtAmount = total - paidAmount;
-        
+
         activeInvoice.total = total;
         activeInvoice.paidAmount = paidAmount;
         activeInvoice.debtAmount = debtAmount < 0 ? 0 : debtAmount;
-        
+
         summaryTotalEl.textContent = formatCurrency(total);
         debtAmountEl.textContent = formatCurrency(activeInvoice.debtAmount);
         saveUiState(); // Chỉ lưu UI state
@@ -156,8 +156,8 @@ document.addEventListener('DOMContentLoaded', async () => { // Thay đổi 1: Ch
     const renderCurrentOrder = () => {
         const activeInvoice = getActiveInvoice();
         if (!activeInvoice) {
-             currentOrderItemsContainer.innerHTML = `<p class="text-gray-900 text-center py-4">Không có hóa đơn nào được chọn.</p>`;
-             return;
+            currentOrderItemsContainer.innerHTML = `<p class="text-gray-900 text-center py-4">Không có hóa đơn nào được chọn.</p>`;
+            return;
         }
 
         const hasItems = activeInvoice.items.length > 0;
@@ -173,14 +173,14 @@ document.addEventListener('DOMContentLoaded', async () => { // Thay đổi 1: Ch
             activeInvoice.items.forEach((item, index) => {
                 const row = document.createElement('tr');
                 row.className = 'bg-white border-b';
-row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="px-2 py-2 font-medium">${item.name}</td><td class="px-2 py-2 text-center"><input type="number" min="1" value="${item.quantity}" data-id="${item.id}" class="w-16 text-center border rounded-md quantity-input"></td><td class="px-2 py-2 text-right"><input type="text" value="${new Intl.NumberFormat('vi-VN').format(item.price)}" data-id="${item.id}" class="w-28 text-right border rounded-md px-1 py-1 price-input bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></td><td class="px-2 py-2 font-semibold text-right">${formatCurrency(item.price * item.quantity)}</td><td class="px-2 py-2 text-center"><button class="text-red-500" data-id="${item.id}" onclick="app.removeFromOrder(this.dataset.id)"><i class="fas fa-trash-alt"></i></button></td>`;                tbody.appendChild(row);
+                row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="px-2 py-2 font-medium">${item.name}</td><td class="px-2 py-2 text-center"><input type="number" min="1" value="${item.quantity}" data-id="${item.id}" class="w-16 text-center border rounded-md quantity-input"></td><td class="px-2 py-2 text-right"><input type="text" value="${new Intl.NumberFormat('vi-VN').format(item.price)}" data-id="${item.id}" class="w-28 text-right border rounded-md px-1 py-1 price-input bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"></td><td class="px-2 py-2 font-semibold text-right">${formatCurrency(item.price * item.quantity)}</td><td class="px-2 py-2 text-center"><button class="text-red-500" data-id="${item.id}" onclick="app.removeFromOrder(this.dataset.id)"><i class="fas fa-trash-alt"></i></button></td>`; tbody.appendChild(row);
             });
             currentOrderItemsContainer.innerHTML = '';
             currentOrderItemsContainer.appendChild(table);
         }
         updatePaymentSummary();
     };
-    
+
     const renderAutocompleteResults = (results, container, clickHandler) => {
         container.innerHTML = '';
         if (results.length === 0) {
@@ -192,9 +192,9 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
             const price = activeInvoice ? (activeInvoice.priceType === 'retail' ? item.retailPrice : item.wholesalePrice) : 0;
             const itemEl = document.createElement('div');
             itemEl.className = 'p-3 hover:bg-blue-50 cursor-pointer border-b last:border-0';
-            
+
             if (item.hasOwnProperty('retailPrice')) {
-                 itemEl.innerHTML = `<div class="font-semibold">${item.name} <span class="text-sm">(${item.id})</span></div><div class="text-blue-600">${formatCurrency(price)}</div>`;
+                itemEl.innerHTML = `<div class="font-semibold">${item.name} <span class="text-sm">(${item.id})</span></div><div class="text-blue-600">${formatCurrency(price)}</div>`;
             } else {
                 itemEl.innerHTML = `<div class="font-semibold">${item.name}</div>`;
             }
@@ -252,14 +252,14 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
                 };
                 tabButton.appendChild(closeBtn);
             }
-            
+
             invoiceTabsContainer.insertBefore(tabButton, newInvoiceBtn);
         });
     };
-    
+
     const renderActiveInvoiceUI = () => {
         const activeInvoice = getActiveInvoice();
-        if(!activeInvoice) return;
+        if (!activeInvoice) return;
 
         priceToggle.checked = activeInvoice.priceType === 'wholesale';
         const isRetail = activeInvoice.priceType === 'retail';
@@ -267,16 +267,16 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
         amountPaidInput.disabled = isRetail;
         payAllBtn.style.display = isRetail ? 'none' : 'flex';
         debtRow.classList.toggle('hidden', isRetail);
-        
+
         customerNameSearchInput.value = activeInvoice.customerName;
         amountPaidInput.value = activeInvoice.paidAmount > 0 ? new Intl.NumberFormat('vi-VN').format(activeInvoice.paidAmount) : '';
-        
+
         updateCustomerDebtDisplay(activeInvoice.customerName);
         renderCurrentOrder();
         renderInvoiceTabs();
         saveUiState();
     };
-    
+
     const populateAndPrintInvoice = (order) => {
         // (Giữ nguyên không đổi)
         if (!printInvoiceContainer || order.priceType === 'payment') return;
@@ -342,38 +342,38 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
         window.print();
         printInvoiceContainer.innerHTML = '';
     };
-    
+
     // --- EVENT HANDLERS & LOGIC (hầu hết giữ nguyên) ---
     const setPriceType = (type) => {
         const activeInvoice = getActiveInvoice();
-        if(!activeInvoice) return;
-        
+        if (!activeInvoice) return;
+
         activeInvoice.priceType = type;
         amountPaidInput.value = '';
-        
+
         if (activeInvoice.items.length > 0) {
             activeInvoice.items.forEach(item => {
-                 const product = state.products.find(p => p.id === item.id);
-                 if (product) {
+                const product = state.products.find(p => p.id === item.id);
+                if (product) {
                     item.price = type === 'retail' ? product.retailPrice : product.wholesalePrice;
-                 }
+                }
             });
         }
         renderActiveInvoiceUI();
     };
 
     priceToggle.addEventListener('change', (e) => setPriceType(e.target.checked ? 'wholesale' : 'retail'));
-    
+
     amountPaidInput.addEventListener('input', (e) => {
         const input = e.target;
         let value = input.value.replace(/\D/g, '');
         input.value = value ? new Intl.NumberFormat('vi-VN').format(value) : '';
         updatePaymentSummary();
     });
-    
+
     payAllBtn.addEventListener('click', () => {
         const activeInvoice = getActiveInvoice();
-        if(!activeInvoice) return;
+        if (!activeInvoice) return;
         amountPaidInput.value = new Intl.NumberFormat('vi-VN').format(activeInvoice.total);
         updatePaymentSummary();
     });
@@ -400,7 +400,7 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
                 orderToUpdate.priceType = activeInvoice.priceType;
                 orderToUpdate.paidAmount = activeInvoice.paidAmount;
                 orderToUpdate.debtAmount = activeInvoice.debtAmount;
-                
+
                 await db.updateOrder(orderToUpdate); // LƯU VÀO DB
                 return orderToUpdate;
             }
@@ -424,7 +424,7 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
 
     const closeInvoiceTab = (invoiceId) => {
         const index = state.invoiceTabs.findIndex(inv => inv.id === invoiceId);
-        
+
         if (index > -1) {
             state.invoiceTabs.splice(index, 1);
         }
@@ -436,70 +436,70 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
         } else if (state.activeInvoiceId === invoiceId) {
             state.activeInvoiceId = state.invoiceTabs[0].id;
         }
-        
+
         renderActiveInvoiceUI();
     };
 
     saveOrderBtn.addEventListener('click', async () => {
-    const savedOrder = await saveCurrentOrder();
-    if (savedOrder) {
-        const invoiceThatWasSaved = state.invoiceTabs.find(inv => inv.id === state.activeInvoiceId);
+        const savedOrder = await saveCurrentOrder();
+        if (savedOrder) {
+            const invoiceThatWasSaved = state.invoiceTabs.find(inv => inv.id === state.activeInvoiceId);
 
-        if (invoiceThatWasSaved && invoiceThatWasSaved.originalOrderId) {
-            alert(`Đã cập nhật đơn hàng ${savedOrder.id}`);
-            // Sau khi cập nhật, có thể điều hướng về trang lịch sử để xem lại
-            window.location.href = `history.html`; 
-        } else {
-            // Chuyển hướng đến trang chi tiết mới và truyền ID của đơn hàng qua URL
-            window.location.href = `order-detail.html?id=${savedOrder.id}`;
+            if (invoiceThatWasSaved && invoiceThatWasSaved.originalOrderId) {
+                alert(`Đã cập nhật đơn hàng ${savedOrder.id}`);
+                // Sau khi cập nhật, có thể điều hướng về trang lịch sử để xem lại
+                window.location.href = `history.html`;
+            } else {
+                // Chuyển hướng đến trang chi tiết mới và truyền ID của đơn hàng qua URL
+                window.location.href = `order-detail.html?id=${savedOrder.id}`;
+            }
+
+            // Xóa tab hóa đơn sau khi đã lưu
+            closeInvoiceTab(state.activeInvoiceId);
         }
-        
-        // Xóa tab hóa đơn sau khi đã lưu
-        closeInvoiceTab(state.activeInvoiceId);
-    }
-});
+    });
 
     // --- Search Logic ---
     orderProductSearchInput.addEventListener('input', (e) => {
-    const rawQuery = e.target.value.trim();
-    const query = removeDiacritics(rawQuery.toLowerCase());
+        const rawQuery = e.target.value.trim();
+        const query = removeDiacritics(rawQuery.toLowerCase());
 
-    if (!query) {
-        autocompleteResultsContainer.classList.add('hidden');
-        return;
-    }
-
-    // --- Phân tích từ khóa nâng cao ---
-    const keywords = query.split(/\s+/).filter(Boolean);
-    let results = state.products;
-
-    // --- Lọc theo từ khóa ---
-    results = results.filter(p => {
-        const normalizedName = removeDiacritics(p.name.toLowerCase());
-        const unit = (p.unit || '').toLowerCase();
-
-        // Kiểm tra tất cả các từ phải khớp
-        const allKeywordsMatch = keywords.every(kw => 
-            normalizedName.includes(kw) || String(p.id).includes(kw) || unit.includes(kw)
-        );
-        return allKeywordsMatch;
-    });
-
-    // --- Hỗ trợ tìm theo giá ---
-    const priceQuery = rawQuery.match(/[<>]=?\s*\d+/);
-    if (priceQuery) {
-        const expr = priceQuery[0].replace(/\s/g, '');
-        const num = parseFloat(expr.match(/\d+/)?.[0] || 0);
-        if (expr.startsWith('<')) {
-            results = results.filter(p => p.retailPrice < num);
-        } else if (expr.startsWith('>')) {
-            results = results.filter(p => p.retailPrice > num);
+        if (!query) {
+            autocompleteResultsContainer.classList.add('hidden');
+            return;
         }
-    }
 
-    // --- Giới hạn và hiển thị kết quả ---
-    const topResults = results.slice(0, 15);
-    autocompleteResultsContainer.innerHTML = topResults.map(p => `
+        // --- Phân tích từ khóa nâng cao ---
+        const keywords = query.split(/\s+/).filter(Boolean);
+        let results = state.products;
+
+        // --- Lọc theo từ khóa ---
+        results = results.filter(p => {
+            const normalizedName = removeDiacritics(p.name.toLowerCase());
+            const unit = (p.unit || '').toLowerCase();
+
+            // Kiểm tra tất cả các từ phải khớp
+            const allKeywordsMatch = keywords.every(kw =>
+                normalizedName.includes(kw) || String(p.id).includes(kw) || unit.includes(kw)
+            );
+            return allKeywordsMatch;
+        });
+
+        // --- Hỗ trợ tìm theo giá ---
+        const priceQuery = rawQuery.match(/[<>]=?\s*\d+/);
+        if (priceQuery) {
+            const expr = priceQuery[0].replace(/\s/g, '');
+            const num = parseFloat(expr.match(/\d+/)?.[0] || 0);
+            if (expr.startsWith('<')) {
+                results = results.filter(p => p.retailPrice < num);
+            } else if (expr.startsWith('>')) {
+                results = results.filter(p => p.retailPrice > num);
+            }
+        }
+
+        // --- Giới hạn và hiển thị kết quả ---
+        const topResults = results.slice(0, 15);
+        autocompleteResultsContainer.innerHTML = topResults.map(p => `
         <div class="p-2 hover:bg-blue-50 cursor-pointer border-b last:border-0" data-id="${p.id}">
             <div class="font-semibold">${p.name} <span class="text-sm text-gray-500">(${p.unit || ''})</span></div>
             <div class="flex justify-between text-sm text-gray-700">
@@ -509,17 +509,17 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
         </div>
     `).join('');
 
-    autocompleteResultsContainer.classList.remove('hidden');
+        autocompleteResultsContainer.classList.remove('hidden');
 
-    // --- Click chọn sản phẩm ---
-    autocompleteResultsContainer.querySelectorAll('[data-id]').forEach(el => {
-        el.addEventListener('click', () => {
-            app.addToOrder(el.dataset.id);
-            orderProductSearchInput.value = '';
-            autocompleteResultsContainer.classList.add('hidden');
+        // --- Click chọn sản phẩm ---
+        autocompleteResultsContainer.querySelectorAll('[data-id]').forEach(el => {
+            el.addEventListener('click', () => {
+                app.addToOrder(el.dataset.id);
+                orderProductSearchInput.value = '';
+                autocompleteResultsContainer.classList.add('hidden');
+            });
         });
     });
-});
 
     customerNameSearchInput.addEventListener('input', (e) => {
         const query = removeDiacritics(e.target.value.toLowerCase().trim());
@@ -530,7 +530,7 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
         renderAutocompleteResults(results.slice(0, 10), customerAutocompleteResults, (customer) => {
             customerNameSearchInput.value = customer.name;
             const activeInvoice = getActiveInvoice();
-            if(activeInvoice) activeInvoice.customerName = customer.name;
+            if (activeInvoice) activeInvoice.customerName = customer.name;
             customerAutocompleteResults.classList.add('hidden');
             updateCustomerDebtDisplay(customer.name);
             saveUiState();
@@ -539,12 +539,12 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
         updateCustomerDebtDisplay(null);
     });
 
-     customerNameSearchInput.addEventListener('focus', (e) => {
+    customerNameSearchInput.addEventListener('focus', (e) => {
         if (!e.target.value.trim()) {
-             renderAutocompleteResults(state.customers.slice(0, 10), customerAutocompleteResults, (customer) => {
+            renderAutocompleteResults(state.customers.slice(0, 10), customerAutocompleteResults, (customer) => {
                 customerNameSearchInput.value = customer.name;
                 const activeInvoice = getActiveInvoice();
-                if(activeInvoice) activeInvoice.customerName = customer.name;
+                if (activeInvoice) activeInvoice.customerName = customer.name;
                 customerAutocompleteResults.classList.add('hidden');
                 updateCustomerDebtDisplay(customer.name);
                 saveUiState();
@@ -553,9 +553,9 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
         }
     });
 
-     customerNameSearchInput.addEventListener('change', (e) => {
+    customerNameSearchInput.addEventListener('change', (e) => {
         const activeInvoice = getActiveInvoice();
-        if(activeInvoice) activeInvoice.customerName = e.target.value;
+        if (activeInvoice) activeInvoice.customerName = e.target.value;
         updateCustomerDebtDisplay(e.target.value);
         saveUiState();
     });
@@ -582,7 +582,7 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
             const originalValue = input.value;
             const cursorPosition = input.selectionStart;
 
-            let value = input.value.replace(/\D/g, ''); 
+            let value = input.value.replace(/\D/g, '');
             input.value = value ? new Intl.NumberFormat('vi-VN').format(value) : '';
 
             const newValue = input.value;
@@ -603,7 +603,7 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
                 const totalCell = row.querySelector('td:nth-child(5)');
                 totalCell.textContent = formatCurrency(item.price * item.quantity);
             }
-            
+
             updatePaymentSummary();
         }
     });
@@ -617,67 +617,67 @@ row.innerHTML = `<td class="px-2 py-2 text-center">${index + 1}</td><td class="p
     quickCustomerInitialDebtInput.addEventListener('input', formatNumberInput);
 
     quickAddCustomerBtn.addEventListener('click', () => {
-    // Lấy tên khách hàng từ ô tìm kiếm
-    const customerNameFromSearch = customerNameSearchInput.value.trim();
+        // Lấy tên khách hàng từ ô tìm kiếm
+        const customerNameFromSearch = customerNameSearchInput.value.trim();
 
-    // Điền tên đó vào ô "Tên khách hàng" trong popup
-    quickCustomerNameInput.value = customerNameFromSearch;
+        // Điền tên đó vào ô "Tên khách hàng" trong popup
+        quickCustomerNameInput.value = customerNameFromSearch;
 
-    // Hiển thị popup
-    quickCustomerModal.classList.remove('hidden');
+        // Hiển thị popup
+        quickCustomerModal.classList.remove('hidden');
 
-    // (Cải tiến nhỏ) Tự động focus vào ô nợ ban đầu nếu tên đã được điền
-    if (customerNameFromSearch) {
-        quickCustomerInitialDebtInput.focus();
-    } else {
-        quickCustomerNameInput.focus();
-    }
-});
+        // (Cải tiến nhỏ) Tự động focus vào ô nợ ban đầu nếu tên đã được điền
+        if (customerNameFromSearch) {
+            quickCustomerInitialDebtInput.focus();
+        } else {
+            quickCustomerNameInput.focus();
+        }
+    });
     closeQuickCustomerModalBtn.addEventListener('click', () => quickCustomerModal.classList.add('hidden'));
 
     // Thay đổi 5: Chuyển hàm lưu khách hàng nhanh sang async và dùng db.js
     // File: script.js
 
-// TÌM VÀ THAY THẾ TOÀN BỘ HÀM NÀY
-saveQuickCustomerBtn.addEventListener('click', async () => {
-    const name = quickCustomerNameInput.value.trim();
-    const initialDebtRaw = quickCustomerInitialDebtInput.value.replace(/\./g, '');
-    const initialDebt = parseFloat(initialDebtRaw) || 0;
+    // TÌM VÀ THAY THẾ TOÀN BỘ HÀM NÀY
+    saveQuickCustomerBtn.addEventListener('click', async () => {
+        const name = quickCustomerNameInput.value.trim();
+        const initialDebtRaw = quickCustomerInitialDebtInput.value.replace(/\./g, '');
+        const initialDebt = parseFloat(initialDebtRaw) || 0;
 
-    if (!name) {
-        alert('Tên khách hàng là bắt buộc.');
-        return;
-    }
+        if (!name) {
+            alert('Tên khách hàng là bắt buộc.');
+            return;
+        }
 
-    // --- LOGIC KIỂM TRA TÊN TRÙNG LẶP ---
-    const normalizedNewName = name.toLowerCase();
-    const isDuplicate = state.customers.some(customer => customer.name.toLowerCase() === normalizedNewName);
+        // --- LOGIC KIỂM TRA TÊN TRÙNG LẶP ---
+        const normalizedNewName = name.toLowerCase();
+        const isDuplicate = state.customers.some(customer => customer.name.toLowerCase() === normalizedNewName);
 
-    if (isDuplicate) {
-        alert(`Tên khách hàng "${name}" đã tồn tại. Vui lòng nhập tên khác.`);
-        return; // Dừng hàm nếu phát hiện tên trùng lặp
-    }
-    // --- KẾT THÚC LOGIC KIỂM TRA ---
+        if (isDuplicate) {
+            alert(`Tên khách hàng "${name}" đã tồn tại. Vui lòng nhập tên khác.`);
+            return; // Dừng hàm nếu phát hiện tên trùng lặp
+        }
+        // --- KẾT THÚC LOGIC KIỂM TRA ---
 
-    // Nếu tên hợp lệ, tiếp tục tạo mới khách hàng
-    const newCustomer = {
-        id: `KH-${Date.now()}`,
-        name: name,
-        initialDebt: initialDebt,
-    };
-    await db.addCustomer(newCustomer);
-    state.customers.push(newCustomer);
-    
-    quickCustomerModal.classList.add('hidden');
-    
-    const activeInvoice = getActiveInvoice();
-    if(activeInvoice) {
-        activeInvoice.customerName = name;
-        customerNameSearchInput.value = name;
-        updateCustomerDebtDisplay(name);
-    }
-    alert(`Đã thêm khách hàng mới: ${name}`);
-});
+        // Nếu tên hợp lệ, tiếp tục tạo mới khách hàng
+        const newCustomer = {
+            id: `KH-${Date.now()}`,
+            name: name,
+            initialDebt: initialDebt,
+        };
+        await db.addCustomer(newCustomer);
+        state.customers.push(newCustomer);
+
+        quickCustomerModal.classList.add('hidden');
+
+        const activeInvoice = getActiveInvoice();
+        if (activeInvoice) {
+            activeInvoice.customerName = name;
+            customerNameSearchInput.value = name;
+            updateCustomerDebtDisplay(name);
+        }
+        alert(`Đã thêm khách hàng mới: ${name}`);
+    });
 
     newInvoiceBtn.addEventListener('click', () => {
         const newInvoice = {
@@ -694,7 +694,7 @@ saveQuickCustomerBtn.addEventListener('click', async () => {
         addToOrder: (id) => {
             const activeInvoice = getActiveInvoice();
             if (!activeInvoice) return;
-            
+
             const product = state.products.find(p => p.id === id);
             if (!product) return;
             const existingItem = activeInvoice.items.find(item => item.id === id);
@@ -753,7 +753,7 @@ saveQuickCustomerBtn.addEventListener('click', async () => {
                     <div class="flex justify-end"><span class="font-semibold w-32">Đã trả:</span><span class="w-40">${formatCurrency(order.paidAmount)}</span></div>
                     <div class="flex justify-end text-red-600"><span class="font-semibold w-32">Còn nợ:</span><span class="font-bold w-40">${formatCurrency(order.debtAmount)}</span></div>` : ''}
                 </div>`;
-            
+
             const printBtn = document.getElementById('print-order-btn');
             const newPrintBtn = printBtn.cloneNode(true);
             printBtn.parentNode.replaceChild(newPrintBtn, printBtn);
@@ -764,7 +764,7 @@ saveQuickCustomerBtn.addEventListener('click', async () => {
             orderDetailModal.classList.remove('hidden');
         }
     };
-    
+
     // Thay đổi 6: Viết lại hàm khởi tạo để đảm bảo DB sẵn sàng trước khi chạy
     const init = async () => {
         await db.init(); // Đợi DB kết nối xong
@@ -796,160 +796,160 @@ saveQuickCustomerBtn.addEventListener('click', async () => {
         closeDetailModalBtn.addEventListener('click', () => orderDetailModal.classList.add('hidden'));
         closeDetailModalBtnFooter.addEventListener('click', () => orderDetailModal.classList.add('hidden'));
     };
-// DÁN VÀO KHU VỰC --- MODAL LOGIC ---
+    // DÁN VÀO KHU VỰC --- MODAL LOGIC ---
 
-// Tự động định dạng số cho các ô giá trong popup sản phẩm
-quickProductWholesalePriceInput.addEventListener('input', formatNumberInput);
-quickProductRetailPriceInput.addEventListener('input', formatNumberInput);
+    // Tự động định dạng số cho các ô giá trong popup sản phẩm
+    quickProductWholesalePriceInput.addEventListener('input', formatNumberInput);
+    quickProductRetailPriceInput.addEventListener('input', formatNumberInput);
 
-// Sự kiện mở popup
-quickAddProductBtn.addEventListener('click', () => {
-    // Gợi ý: Lấy text từ ô tìm kiếm điền vào tên sản phẩm
-    quickProductNameInput.value = orderProductSearchInput.value.trim();
-    quickProductModal.classList.remove('hidden');
-    quickProductNameInput.focus();
-});
+    // Sự kiện mở popup
+    quickAddProductBtn.addEventListener('click', () => {
+        // Gợi ý: Lấy text từ ô tìm kiếm điền vào tên sản phẩm
+        quickProductNameInput.value = orderProductSearchInput.value.trim();
+        quickProductModal.classList.remove('hidden');
+        quickProductNameInput.focus();
+    });
 
-// Sự kiện đóng popup
-closeQuickProductModalBtn.addEventListener('click', () => {
-    quickProductModal.classList.add('hidden');
-});
+    // Sự kiện đóng popup
+    closeQuickProductModalBtn.addEventListener('click', () => {
+        quickProductModal.classList.add('hidden');
+    });
 
-// Sự kiện lưu sản phẩm mới
-saveQuickProductBtn.addEventListener('click', async () => {
-    const name = quickProductNameInput.value.trim();
-    if (!name) {
-        alert('Tên sản phẩm không được để trống.');
-        return;
-    }
+    // Sự kiện lưu sản phẩm mới
+    saveQuickProductBtn.addEventListener('click', async () => {
+        const name = quickProductNameInput.value.trim();
+        if (!name) {
+            alert('Tên sản phẩm không được để trống.');
+            return;
+        }
 
-    const wholesalePrice = parseFloat(quickProductWholesalePriceInput.value.replace(/\./g, '')) || 0;
-    const retailPrice = parseFloat(quickProductRetailPriceInput.value.replace(/\./g, '')) || 0;
+        const wholesalePrice = parseFloat(quickProductWholesalePriceInput.value.replace(/\./g, '')) || 0;
+        const retailPrice = parseFloat(quickProductRetailPriceInput.value.replace(/\./g, '')) || 0;
 
-    const newProduct = {
-        id: Date.now().toString(),
-        name: name,
-        unit: 'Cái', // Đơn vị mặc định, bạn có thể thay đổi
-        importPrice: 0, // Giá nhập mặc định
-        wholesalePrice: wholesalePrice,
-        retailPrice: retailPrice,
-    };
+        const newProduct = {
+            id: Date.now().toString(),
+            name: name,
+            unit: 'Cái', // Đơn vị mặc định, bạn có thể thay đổi
+            importPrice: 0, // Giá nhập mặc định
+            wholesalePrice: wholesalePrice,
+            retailPrice: retailPrice,
+        };
 
-    // 1. Lưu vào cơ sở dữ liệu
-    await db.addProduct(newProduct);
-    // 2. Cập nhật state hiện tại để không cần tải lại trang
-    state.products.push(newProduct);
-    // 3. Tự động thêm sản phẩm vừa tạo vào đơn hàng hiện tại
-    app.addToOrder(newProduct.id);
+        // 1. Lưu vào cơ sở dữ liệu
+        await db.addProduct(newProduct);
+        // 2. Cập nhật state hiện tại để không cần tải lại trang
+        state.products.push(newProduct);
+        // 3. Tự động thêm sản phẩm vừa tạo vào đơn hàng hiện tại
+        app.addToOrder(newProduct.id);
 
-    // 4. Đóng và dọn dẹp popup
-    quickProductModal.classList.add('hidden');
-    document.getElementById('quick-product-form').reset();
-    
-    alert(`Đã thêm sản phẩm "${name}" và đưa vào đơn hàng.`);
-});
+        // 4. Đóng và dọn dẹp popup
+        quickProductModal.classList.add('hidden');
+        document.getElementById('quick-product-form').reset();
+
+        alert(`Đã thêm sản phẩm "${name}" và đưa vào đơn hàng.`);
+    });
     // Thay đổi 7: Viết lại logic xuất/nhập dữ liệu
     const exportAllBtn = document.getElementById('export-all-btn');
     const importAllBtn = document.getElementById('import-all-btn');
     const importAllInput = document.getElementById('import-all-input');
 
-   // File: script.js
+    // File: script.js
 
-// TÌM VÀ THAY THẾ TOÀN BỘ 2 HÀM NÀY Ở CUỐI TỆP
+    // TÌM VÀ THAY THẾ TOÀN BỘ 2 HÀM NÀY Ở CUỐI TỆP
 
-const exportAllData = async () => {
-    try {
-        alert('Đang chuẩn bị dữ liệu để xuất, vui lòng chờ...');
-        // Lấy TOÀN BỘ dữ liệu từ DB
-        const products = await db.getAllProducts();
-        const orders = await db.getAllOrders();
-        const customers = await db.getAllCustomers();
-        const purchases = await db.getAllPurchases();
-        const suppliers = await db.getAllSuppliers();
-
-        if (products.length === 0 && orders.length === 0 && customers.length === 0 && purchases.length === 0 && suppliers.length === 0) {
-            alert('Chưa có dữ liệu để xuất.');
-            return;
-        }
-
-        const wb = XLSX.utils.book_new();
-        const wsProducts = XLSX.utils.json_to_sheet(products);
-        const wsOrders = XLSX.utils.json_to_sheet(orders);
-        const wsCustomers = XLSX.utils.json_to_sheet(customers);
-        const wsPurchases = XLSX.utils.json_to_sheet(purchases);
-        const wsSuppliers = XLSX.utils.json_to_sheet(suppliers);
-
-        XLSX.utils.book_append_sheet(wb, wsProducts, "Products");
-        XLSX.utils.book_append_sheet(wb, wsOrders, "Orders");
-        XLSX.utils.book_append_sheet(wb, wsCustomers, "Customers");
-        XLSX.utils.book_append_sheet(wb, wsPurchases, "Purchases");
-        XLSX.utils.book_append_sheet(wb, wsSuppliers, "Suppliers");
-
-        const today = new Date().toISOString().split('T')[0];
-        const filename = `SalesDashboard_Backup_${today}.xlsx`;
-        XLSX.writeFile(wb, filename);
-        alert('Đã xuất toàn bộ dữ liệu thành công!');
-    } catch (error) {
-        console.error("Lỗi khi xuất dữ liệu:", error);
-        alert("Đã xảy ra lỗi trong quá trình xuất dữ liệu.");
-    }
-};
-
-// 👇 DÒNG QUAN TRỌNG: giúp toast gọi được hàm này
-window.exportAllData = exportAllData;
-
-
-const importAllData = (file) => {
-    if (!confirm('CẢNH BÁO: Thao tác này sẽ XÓA TOÀN BỘ dữ liệu hiện tại (Bán Hàng, Nhập Hàng, Khách Hàng,...) và thay thế bằng dữ liệu từ tệp Excel. Bạn có chắc chắn muốn tiếp tục?')) {
-        return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
+    const exportAllData = async () => {
         try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
+            alert('Đang chuẩn bị dữ liệu để xuất, vui lòng chờ...');
+            // Lấy TOÀN BỘ dữ liệu từ DB
+            const products = await db.getAllProducts();
+            const orders = await db.getAllOrders();
+            const customers = await db.getAllCustomers();
+            const purchases = await db.getAllPurchases();
+            const suppliers = await db.getAllSuppliers();
 
-            // Lấy dữ liệu từ tất cả các sheet
-            const productsSheet = workbook.Sheets["Products"];
-            const ordersSheet = workbook.Sheets["Orders"];
-            const customersSheet = workbook.Sheets["Customers"];
-            const purchasesSheet = workbook.Sheets["Purchases"]; // <-- THÊM MỚI
-            const suppliersSheet = workbook.Sheets["Suppliers"]; // <-- THÊM MỚI
-
-            if (!productsSheet || !ordersSheet || !customersSheet || !purchasesSheet || !suppliersSheet) {
-                alert("File không hợp lệ. Hãy đảm bảo có đủ 5 sheet: Products, Orders, Customers, Purchases, và Suppliers.");
+            if (products.length === 0 && orders.length === 0 && customers.length === 0 && purchases.length === 0 && suppliers.length === 0) {
+                alert('Chưa có dữ liệu để xuất.');
                 return;
             }
 
-            const products = XLSX.utils.sheet_to_json(productsSheet);
-            const orders = XLSX.utils.sheet_to_json(ordersSheet);
-            const customers = XLSX.utils.sheet_to_json(customersSheet);
-            const purchases = XLSX.utils.sheet_to_json(purchasesSheet); // <-- THÊM MỚI
-            const suppliers = XLSX.utils.sheet_to_json(suppliersSheet); // <-- THÊM MỚI
+            const wb = XLSX.utils.book_new();
+            const wsProducts = XLSX.utils.json_to_sheet(products);
+            const wsOrders = XLSX.utils.json_to_sheet(orders);
+            const wsCustomers = XLSX.utils.json_to_sheet(customers);
+            const wsPurchases = XLSX.utils.json_to_sheet(purchases);
+            const wsSuppliers = XLSX.utils.json_to_sheet(suppliers);
 
-            // Ghi đè toàn bộ dữ liệu vào DB
-            await db.overwriteStore(db.STORES.products, products);
-            await db.overwriteStore(db.STORES.orders, orders);
-            await db.overwriteStore(db.STORES.customers, customers);
-            await db.overwriteStore(db.STORES.purchases, purchases); // <-- THÊM MỚI
-            await db.overwriteStore(db.STORES.suppliers, suppliers); // <-- THÊM MỚI
-            
-            // Xóa trạng thái tab cũ
-            localStorage.removeItem('salesDashboardUiState');
-            localStorage.removeItem('purchaseDashboardUiState'); // <-- THÊM MỚI
+            XLSX.utils.book_append_sheet(wb, wsProducts, "Products");
+            XLSX.utils.book_append_sheet(wb, wsOrders, "Orders");
+            XLSX.utils.book_append_sheet(wb, wsCustomers, "Customers");
+            XLSX.utils.book_append_sheet(wb, wsPurchases, "Purchases");
+            XLSX.utils.book_append_sheet(wb, wsSuppliers, "Suppliers");
 
-            alert('Đã nhập dữ liệu thành công! Trang sẽ được tải lại.');
-            location.reload();
-
-        } catch(error) {
-            console.error("Lỗi khi nhập dữ liệu:", error);
-            alert("Đã xảy ra lỗi trong quá trình nhập dữ liệu. Vui lòng kiểm tra lại định dạng file.");
+            const today = new Date().toISOString().split('T')[0];
+            const filename = `SalesDashboard_Backup_${today}.xlsx`;
+            XLSX.writeFile(wb, filename);
+            alert('Đã xuất toàn bộ dữ liệu thành công!');
+        } catch (error) {
+            console.error("Lỗi khi xuất dữ liệu:", error);
+            alert("Đã xảy ra lỗi trong quá trình xuất dữ liệu.");
         }
     };
-    reader.readAsArrayBuffer(file);
-    importAllInput.value = '';
-};
+
+    // 👇 DÒNG QUAN TRỌNG: giúp toast gọi được hàm này
+    window.exportAllData = exportAllData;
+
+
+    const importAllData = (file) => {
+        if (!confirm('CẢNH BÁO: Thao tác này sẽ XÓA TOÀN BỘ dữ liệu hiện tại (Bán Hàng, Nhập Hàng, Khách Hàng,...) và thay thế bằng dữ liệu từ tệp Excel. Bạn có chắc chắn muốn tiếp tục?')) {
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                // Lấy dữ liệu từ tất cả các sheet
+                const productsSheet = workbook.Sheets["Products"];
+                const ordersSheet = workbook.Sheets["Orders"];
+                const customersSheet = workbook.Sheets["Customers"];
+                const purchasesSheet = workbook.Sheets["Purchases"]; // <-- THÊM MỚI
+                const suppliersSheet = workbook.Sheets["Suppliers"]; // <-- THÊM MỚI
+
+                if (!productsSheet || !ordersSheet || !customersSheet || !purchasesSheet || !suppliersSheet) {
+                    alert("File không hợp lệ. Hãy đảm bảo có đủ 5 sheet: Products, Orders, Customers, Purchases, và Suppliers.");
+                    return;
+                }
+
+                const products = XLSX.utils.sheet_to_json(productsSheet);
+                const orders = XLSX.utils.sheet_to_json(ordersSheet);
+                const customers = XLSX.utils.sheet_to_json(customersSheet);
+                const purchases = XLSX.utils.sheet_to_json(purchasesSheet); // <-- THÊM MỚI
+                const suppliers = XLSX.utils.sheet_to_json(suppliersSheet); // <-- THÊM MỚI
+
+                // Ghi đè toàn bộ dữ liệu vào DB
+                await db.overwriteStore(db.STORES.products, products);
+                await db.overwriteStore(db.STORES.orders, orders);
+                await db.overwriteStore(db.STORES.customers, customers);
+                await db.overwriteStore(db.STORES.purchases, purchases); // <-- THÊM MỚI
+                await db.overwriteStore(db.STORES.suppliers, suppliers); // <-- THÊM MỚI
+
+                // Xóa trạng thái tab cũ
+                localStorage.removeItem('salesDashboardUiState');
+                localStorage.removeItem('purchaseDashboardUiState'); // <-- THÊM MỚI
+
+                alert('Đã nhập dữ liệu thành công! Trang sẽ được tải lại.');
+                location.reload();
+
+            } catch (error) {
+                console.error("Lỗi khi nhập dữ liệu:", error);
+                alert("Đã xảy ra lỗi trong quá trình nhập dữ liệu. Vui lòng kiểm tra lại định dạng file.");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+        importAllInput.value = '';
+    };
 
     if (exportAllBtn) exportAllBtn.addEventListener('click', exportAllData);
     if (importAllBtn && importAllInput) {
@@ -962,17 +962,17 @@ const importAllData = (file) => {
 
     // --- KHỞI CHẠY ỨNG DỤNG ---
     init();
-// --- ĐĂNG KÝ SERVICE WORKER ---
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((reg) => {
-        console.log('Service worker registered successfully.', reg);
-      }).catch((err) => {
-        console.log('Service worker registration failed: ', err);
-      });
-  });
-}
+    // --- ĐĂNG KÝ SERVICE WORKER ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then((reg) => {
+                    console.log('Service worker registered successfully.', reg);
+                }).catch((err) => {
+                    console.log('Service worker registration failed: ', err);
+                });
+        });
+    }
 });
 // --- LOGIC KIỂM TRA VÀ THÔNG BÁO CẬP NHẬT ---
 (() => {
@@ -1060,89 +1060,24 @@ if ('serviceWorker' in navigator) {
         });
     }
 })();
-// --- TOAST NHẮC NGƯỜI DÙNG BACKUP / CẬP NHẬT DỮ LIỆU ---
-function showBackupToast(message, type = 'info', clickable = false) {
-  let toast = document.getElementById('backup-toast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'backup-toast';
-    document.body.appendChild(toast);
-  }
 
-  toast.className = `show ${type}`;
-  toast.textContent = message;
-
-  // Nếu cho phép click → chạy exportAllData()
-  if (clickable) {
-    toast.style.cursor = 'pointer';
-    toast.onclick = async () => {
-      toast.onclick = null; // chặn click liên tục
-      toast.textContent = "⏳ Đang xuất dữ liệu...";
-      try {
-        await exportAllData();
-        const today = new Date().toDateString();
-        localStorage.setItem('lastBackupDate', today);
-        toast.textContent = "✅ Đã xuất dữ liệu hôm nay!";
-        toast.classList.remove('warning');
-        toast.classList.add('success');
-      } catch (err) {
-        console.error(err);
-        toast.textContent = "❌ Lỗi khi xuất dữ liệu!";
-      }
-      // Tự ẩn sau 3s sau khi xuất xong
-      setTimeout(() => toast.classList.remove('show'), 3000);
-    };
-  } else {
-    toast.style.cursor = 'default';
-    toast.onclick = null;
-  }
-
-  // Tự động ẩn sau 5 giây nếu không bấm
-  setTimeout(() => {
-    toast.classList.remove('show');
-  }, 5000);
-}
-
-function checkDailyBackupStatus() {
-  const today = new Date().toDateString();
-  const lastBackupDate = localStorage.getItem('lastBackupDate');
-
-  if (lastBackupDate === today) {
-    // Đã cập nhật hôm nay
-    showBackupToast("✅ Bạn đã cập nhật dữ liệu hôm nay.", "success", false);
-  } else {
-    // Chưa cập nhật hôm nay
-    showBackupToast("⚠️ Bạn chưa cập nhật dữ liệu hôm nay! (Nhấn để xuất)", "warning", true);
-  }
-}
-
-// Gọi kiểm tra khi app khởi động
-window.addEventListener('load', checkDailyBackupStatus);
-
-// Khi người dùng xuất dữ liệu thủ công → lưu ngày hôm nay
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'export-all-btn') {
-    const today = new Date().toDateString();
-    localStorage.setItem('lastBackupDate', today);
-  }
-});
 
 // --- NÚT FLOATING: LÀM MỚI ỨNG DỤNG (KHÔNG MẤT DỮ LIỆU) ---
 document.addEventListener('DOMContentLoaded', async () => {
-  const refreshBtn = document.getElementById('refresh-float-btn');
-  if (!refreshBtn) return;
+    const refreshBtn = document.getElementById('refresh-float-btn');
+    if (!refreshBtn) return;
 
-  refreshBtn.addEventListener('click', async () => {
-    if (!confirm("🔄 Làm mới ứng dụng?\n\nCác dữ liệu trong kho (đơn hàng, khách hàng, hàng hóa...) sẽ được GIỮ LẠI.")) return;
+    refreshBtn.addEventListener('click', async () => {
+        if (!confirm("🔄 Làm mới ứng dụng?\n\nCác dữ liệu trong kho (đơn hàng, khách hàng, hàng hóa...) sẽ được GIỮ LẠI.")) return;
 
-    try {
-      const cacheNames = await caches.keys();
-      for (const name of cacheNames) await caches.delete(name);
-      alert("✅ Cache đã được xóa. Ứng dụng sẽ tải lại phiên bản mới nhất.");
-      location.reload(true);
-    } catch (err) {
-      console.error("Lỗi khi làm mới cache:", err);
-      alert("❌ Không thể làm mới ứng dụng. Vui lòng thử lại.");
-    }
-  });
+        try {
+            const cacheNames = await caches.keys();
+            for (const name of cacheNames) await caches.delete(name);
+            alert("✅ Cache đã được xóa. Ứng dụng sẽ tải lại phiên bản mới nhất.");
+            location.reload(true);
+        } catch (err) {
+            console.error("Lỗi khi làm mới cache:", err);
+            alert("❌ Không thể làm mới ứng dụng. Vui lòng thử lại.");
+        }
+    });
 });

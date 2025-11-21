@@ -1,10 +1,10 @@
 // File: db.js
 
-(function() {
+(function () {
     // --- CẤU HÌNH CƠ SỞ DỮ LIỆU ---
     const DB_NAME = 'salesDashboardDB';
     // THAY ĐỔI: Tăng phiên bản DB để kích hoạt onupgradeneeded
-    const DB_VERSION = 2; 
+    const DB_VERSION = 2;
     const STORES = {
         products: 'products',
         orders: 'orders',
@@ -66,7 +66,7 @@
             };
         });
     }
-    
+
     function getAll(storeName) {
         return new Promise((resolve, reject) => {
             const transaction = db.transaction(storeName, 'readonly');
@@ -93,7 +93,7 @@
         return new Promise((resolve, reject) => {
             const transaction = db.transaction(storeName, 'readwrite');
             const store = transaction.objectStore(storeName);
-            const request = store.put(item); 
+            const request = store.put(item);
 
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error);
@@ -110,12 +110,12 @@
             request.onerror = () => reject(request.error);
         });
     }
-    
+
     function overwriteStore(storeName, data) {
-         return new Promise((resolve, reject) => {
+        return new Promise((resolve, reject) => {
             const transaction = db.transaction(storeName, 'readwrite');
             const store = transaction.objectStore(storeName);
-            
+
             transaction.oncomplete = () => resolve();
             transaction.onerror = () => reject(transaction.error);
 
@@ -128,7 +128,7 @@
     window.db = {
         init: initDB,
         STORES: STORES,
-        
+
         getAllProducts: () => getAll(STORES.products),
         addProduct: (product) => add(STORES.products, product),
         updateProduct: (product) => update(STORES.products, product),
@@ -138,22 +138,18 @@
         addOrder: (order) => add(STORES.orders, order),
         updateOrder: (order) => update(STORES.orders, order),
         deleteOrder: (id) => remove(STORES.orders, id),
-        
+
         getAllCustomers: () => getAll(STORES.customers),
         addCustomer: (customer) => add(STORES.customers, customer),
         updateCustomer: (customer) => update(STORES.customers, customer),
         deleteCustomer: (id) => remove(STORES.customers, id),
-        
+
         // THÊM MỚI: Các hàm cho Nhập Hàng và NCC
         getAllPurchases: () => getAll(STORES.purchases),
         addPurchase: (purchase) => add(STORES.purchases, purchase),
-          updatePurchase: (purchase) => update(STORES.purchases, purchase),
-       deletePurchase: (id) => remove(STORES.purchases, id),
-    
-    getAllSuppliers: () => getAll(STORES.suppliers),
-        // THÊM DÒNG NÀY VÀO
+        updatePurchase: (purchase) => update(STORES.purchases, purchase),
         deletePurchase: (id) => remove(STORES.purchases, id),
-        
+
         getAllSuppliers: () => getAll(STORES.suppliers),
         addSupplier: (supplier) => add(STORES.suppliers, supplier),
         updateSupplier: (supplier) => update(STORES.suppliers, supplier),
