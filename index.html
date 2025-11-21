@@ -56,6 +56,9 @@
             <header class="h-16 flex items-center justify-between px-6 bg-white border-b">
                  <h2 id="page-title" class="text-2xl font-semibold text-gray-900">Tạo Đơn Hàng</h2>
                  <div class="flex space-x-2">
+                    <button id="sync-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded">
+                        <i class="fas fa-sync mr-1"></i> Đồng bộ
+                    </button>
                     <button id="export-all-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
                         <i class="fas fa-file-export mr-1"></i> Xuất Dữ Liệu
                     </button>
@@ -230,7 +233,10 @@
 
     <div id="print-invoice" class="hidden"></div>
     
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db.js"></script>
+    <script src="supabase-client.js"></script>
+    <script src="sync.js"></script>
     <script src="script.js"></script>
     <!-- Nút làm mới ứng dụng nổi -->
 <button id="refresh-float-btn" title="Làm mới ứng dụng">

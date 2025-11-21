@@ -36,9 +36,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const createBtn = (text, page, disabled = false, active = false) => {
       const btn = document.createElement('button');
       btn.innerHTML = text;
-      btn.className = `px-3 py-1 rounded-md ${
-        active ? 'bg-blue-600 text-white' : 'bg-gray-200'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-300'}`;
+      btn.className = `px-3 py-1 rounded-md ${active ? 'bg-blue-600 text-white' : 'bg-gray-200'
+        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-300'}`;
       btn.disabled = disabled;
       if (!disabled) btn.onclick = () => {
         currentPage = page;
@@ -62,8 +61,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // --- Render bảng ---
   const renderTable = () => {
-   const query = searchBar.value;
-const filtered = advancedFilter(query, products);
+    const query = searchBar.value;
+    const filtered = advancedFilter(query, products);
     const start = (currentPage - 1) * rowsPerPage;
     const end = start + rowsPerPage;
     const pageData = filtered.slice(start, end);
@@ -138,11 +137,11 @@ const filtered = advancedFilter(query, products);
 
     products = await db.getAllProducts();
     products.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-    
+
     renderTable();
     closeModal();
   };
-  
+
   // THÊM MỚI: Hàm tự động định dạng số khi người dùng nhập
   const autoFormatNumberInput = (e) => {
     const input = e.target;
@@ -158,63 +157,63 @@ const filtered = advancedFilter(query, products);
   cancelBtn.onclick = closeModal;
   addBtn.onclick = () => openModal();
   searchBar.addEventListener('input', () => {
-  currentPage = 1;
-  renderTable();
-});
-
-// 🧩 Hỗ trợ tìm kiếm nâng cao
-const advancedFilter = (query, data) => {
-  const raw = query.trim().toLowerCase();
-  if (!raw) return data;
-
-  const removeDiacritics = (str) =>
-    str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
-
-  const q = removeDiacritics(raw);
-  const keywords = q.split(/\s+/).filter(Boolean);
-
-  // --- Tìm theo giá ---
-  const priceMatch = q.match(/[<>]=?\s*\d+/);
-  let results = data;
-
-  // --- Tìm theo từ khóa ---
-  results = results.filter((p) => {
-    const combined = removeDiacritics(
-      `${p.id} ${p.name} ${p.unit || ''}`.toLowerCase()
-    );
-    return keywords.every((kw) => combined.includes(kw));
+    currentPage = 1;
+    renderTable();
   });
 
-  // --- Lọc theo giá nhập, sỉ, lẻ ---
-  if (priceMatch) {
-    const expr = priceMatch[0].replace(/\s/g, '');
-    const num = parseFloat(expr.match(/\d+/)?.[0] || 0);
-    if (expr.startsWith('<')) {
-      results = results.filter(
-        (p) =>
-          p.importPrice < num ||
-          p.wholesalePrice < num ||
-          p.retailPrice < num
-      );
-    } else if (expr.startsWith('>')) {
-      results = results.filter(
-        (p) =>
-          p.importPrice > num ||
-          p.wholesalePrice > num ||
-          p.retailPrice > num
-      );
-    } else if (expr.startsWith('=')) {
-      results = results.filter(
-        (p) =>
-          p.importPrice === num ||
-          p.wholesalePrice === num ||
-          p.retailPrice === num
-      );
-    }
-  }
+  // 🧩 Hỗ trợ tìm kiếm nâng cao
+  const advancedFilter = (query, data) => {
+    const raw = query.trim().toLowerCase();
+    if (!raw) return data;
 
-  return results;
-};
+    const removeDiacritics = (str) =>
+      str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+
+    const q = removeDiacritics(raw);
+    const keywords = q.split(/\s+/).filter(Boolean);
+
+    // --- Tìm theo giá ---
+    const priceMatch = q.match(/[<>]=?\s*\d+/);
+    let results = data;
+
+    // --- Tìm theo từ khóa ---
+    results = results.filter((p) => {
+      const combined = removeDiacritics(
+        `${p.id} ${p.name} ${p.unit || ''}`.toLowerCase()
+      );
+      return keywords.every((kw) => combined.includes(kw));
+    });
+
+    // --- Lọc theo giá nhập, sỉ, lẻ ---
+    if (priceMatch) {
+      const expr = priceMatch[0].replace(/\s/g, '');
+      const num = parseFloat(expr.match(/\d+/)?.[0] || 0);
+      if (expr.startsWith('<')) {
+        results = results.filter(
+          (p) =>
+            p.importPrice < num ||
+            p.wholesalePrice < num ||
+            p.retailPrice < num
+        );
+      } else if (expr.startsWith('>')) {
+        results = results.filter(
+          (p) =>
+            p.importPrice > num ||
+            p.wholesalePrice > num ||
+            p.retailPrice > num
+        );
+      } else if (expr.startsWith('=')) {
+        results = results.filter(
+          (p) =>
+            p.importPrice === num ||
+            p.wholesalePrice === num ||
+            p.retailPrice === num
+        );
+      }
+    }
+
+    return results;
+  };
 
 
   // --- Nhập Excel ---
@@ -235,23 +234,27 @@ const advancedFilter = (query, data) => {
         importInput.value = '';
         return;
       }
+      // Kiểm tra xem file có chứa cột ID/id và HH_Ten/name không
       const firstRow = rows[0];
-      if (!firstRow.hasOwnProperty('ID') || !firstRow.hasOwnProperty('HH_Ten')) {
-          alert("File Excel không đúng định dạng. Cần phải có ít nhất 2 cột 'ID' và 'HH_Ten'.");
-          importInput.value = '';
-          return;
+      const hasId = firstRow.hasOwnProperty('ID') || firstRow.hasOwnProperty('id');
+      const hasName = firstRow.hasOwnProperty('HH_Ten') || firstRow.hasOwnProperty('name');
+
+      if (!hasId || !hasName) {
+        alert("File Excel không đúng định dạng. Cần phải có cột 'ID' (hoặc 'id') và 'HH_Ten' (hoặc 'name').");
+        importInput.value = '';
+        return;
       }
 
       const newData = rows
-        .filter((r) => r.ID && r.HH_Ten)
+        .filter((r) => (r.ID || r.id) && (r.HH_Ten || r.name))
         .map((r) => ({
-          id: String(r.ID).trim(),
-          name: r.HH_Ten?.toString().trim() || '',
-          unit: r.HH_DonVi?.toString().trim() || '',
-          importPrice: parseFloat(String(r.HH_GiaNhap).replace(/[^\d.-]/g, '')) || 0,
-          wholesalePrice: parseFloat(String(r.HH_GiaBan).replace(/[^\d.-]/g, '')) || 0,
-          retailPrice: parseFloat(String(r.HH_GiabanLe).replace(/[^\d.-]/g, '')) || 0,
-          note: r['Ghi chu']?.toString().trim() || '',
+          id: String(r.ID || r.id).trim(),
+          name: (r.HH_Ten || r.name)?.toString().trim() || '',
+          unit: (r.HH_DonVi || r.unit)?.toString().trim() || '',
+          importPrice: parseFloat(String(r.HH_GiaNhap || r.importPrice || 0).replace(/[^\d.-]/g, '')) || 0,
+          wholesalePrice: parseFloat(String(r.HH_GiaBan || r.wholesalePrice || 0).replace(/[^\d.-]/g, '')) || 0,
+          retailPrice: parseFloat(String(r.HH_GiabanLe || r.retailPrice || 0).replace(/[^\d.-]/g, '')) || 0,
+          note: (r['Ghi chu'] || r.note)?.toString().trim() || '',
         }));
 
       if (newData.length === 0) {
@@ -261,23 +264,23 @@ const advancedFilter = (query, data) => {
       }
 
       await db.overwriteStore(db.STORES.products, newData);
-      
+
       alert(`Đã nhập ${newData.length} sản phẩm thành công! Trang sẽ tự động tải lại.`);
       location.reload();
 
     } catch (error) {
-        console.error("Lỗi khi nhập file:", error);
-        alert("Đã xảy ra lỗi khi đọc file. Vui lòng đảm bảo bạn chọn một file Excel hợp lệ (.xlsx, .xls).");
+      console.error("Lỗi khi nhập file:", error);
+      alert("Đã xảy ra lỗi khi đọc file. Vui lòng đảm bảo bạn chọn một file Excel hợp lệ (.xlsx, .xls).");
     } finally {
-        importInput.value = '';
+      importInput.value = '';
     }
   };
 
   // --- Xuất Excel ---
   exportBtn.onclick = () => {
     if (products.length === 0) {
-        alert('Chưa có sản phẩm nào để xuất ra file Excel.');
-        return;
+      alert('Chưa có sản phẩm nào để xuất ra file Excel.');
+      return;
     }
 
     const worksheet = XLSX.utils.json_to_sheet(products);
@@ -301,57 +304,57 @@ const advancedFilter = (query, data) => {
 
   renderTable();
   // --- ĐĂNG KÝ SERVICE WORKER ---
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((reg) => {
-        console.log('Service worker registered successfully.', reg);
-      }).catch((err) => {
-        console.log('Service worker registration failed: ', err);
-      });
-  });
-}
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => {
+          console.log('Service worker registered successfully.', reg);
+        }).catch((err) => {
+          console.log('Service worker registration failed: ', err);
+        });
+    });
+  }
 });
 // --- LOGIC KIỂM TRA VÀ THÔNG BÁO CẬP NHẬT ---
 (() => {
-    let newWorker;
+  let newWorker;
 
-    function showUpdateBar() {
-        let toast = document.getElementById('update-toast');
-        if (!toast) {
-            toast = document.createElement('div');
-            toast.id = 'update-toast';
-            toast.innerHTML = `
+  function showUpdateBar() {
+    let toast = document.getElementById('update-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'update-toast';
+      toast.innerHTML = `
                 <span>Có phiên bản mới.</span>
                 <button id="reload-button" class="ml-4 font-bold underline">Cập nhật ngay</button>
             `;
-            document.body.appendChild(toast);
+      document.body.appendChild(toast);
 
-            document.getElementById('reload-button').addEventListener('click', () => {
-                newWorker.postMessage({ action: 'skipWaiting' });
-            });
-        }
-        // Thêm class để kích hoạt animation
-        toast.classList.add('show');
+      document.getElementById('reload-button').addEventListener('click', () => {
+        newWorker.postMessage({ action: 'skipWaiting' });
+      });
     }
+    // Thêm class để kích hoạt animation
+    toast.classList.add('show');
+  }
 
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
-            reg.addEventListener('updatefound', () => {
-                newWorker = reg.installing;
-                newWorker.addEventListener('statechange', () => {
-                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        showUpdateBar();
-                    }
-                });
-            });
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      reg.addEventListener('updatefound', () => {
+        newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateBar();
+          }
         });
+      });
+    });
 
-        let refreshing;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (refreshing) return;
-            window.location.reload();
-            refreshing = true;
-        });
-    }
+    let refreshing;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      window.location.reload();
+      refreshing = true;
+    });
+  }
 })();
