@@ -309,6 +309,19 @@
     <script src="supabase-client.js"></script>
     <script src="sync.js"></script>
     <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((registration) => {
+                        console.log('Service Worker đã được đăng ký:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('Lỗi đăng ký Service Worker:', error);
+                    });
+            });
+        }
+    </script>
     <!-- Nút làm mới ứng dụng nổi -->
     <button id="refresh-float-btn" title="Làm mới ứng dụng">
         <i class="fas fa-sync-alt"></i>
