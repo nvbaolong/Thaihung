@@ -285,56 +285,56 @@ document.addEventListener('DOMContentLoaded', async () => { // Thay đổi 1: Ch
 
         let itemsHtml = order.items.map((item, index) => `
             <tr style="border-top: 1px dashed #333;">
-                <td style="padding: 3px 2px; text-align: center;">${index + 1}</td>
-                <td style="padding: 3px 2px;">${item.name}</td>
-                <td style="padding: 3px 2px; text-align: center;">${item.quantity}</td>
-                <td style="padding: 3px 2px; text-align: right;">${formatCurrencyForPrint(item.price)}</td>
-                <td style="padding: 3px 2px; text-align: right;">${formatCurrencyForPrint(item.price * item.quantity)}</td>
+                <td style="padding: 2px 1px; text-align: center;">${index + 1}</td>
+                <td style="padding: 2px 1px;">${item.name}</td>
+                <td style="padding: 2px 1px; text-align: center;">${item.quantity}</td>
+                <td style="padding: 2px 1px; text-align: right;">${formatCurrencyForPrint(item.price)}</td>
+                <td style="padding: 2px 1px; text-align: right;">${formatCurrencyForPrint(item.price * item.quantity)}</td>
             </tr>
         `).join('');
 
         let summaryHtml = `
             <tr style="border-top: 2px solid #000; font-weight: bold;">
-                <td style="text-align: right; padding: 3px 2px;" colspan="4">Tổng cộng:</td>
-                <td style="text-align: right; padding: 3px 2px;">${formatCurrency(order.total)}</td>
+                <td style="text-align: right; padding: 2px 1px;" colspan="4">Tổng cộng:</td>
+                <td style="text-align: right; padding: 2px 1px;">${formatCurrency(order.total)}</td>
             </tr>
         `;
         if (isWholesale) {
             summaryHtml += `
                 <tr style="border-top: 1px dashed #333;">
-                    <td style="text-align: right; padding: 3px 2px;" colspan="4">Đã trả:</td>
-                    <td style="text-align: right; padding: 3px 2px;">${formatCurrency(order.paidAmount)}</td>
+                    <td style="text-align: right; padding: 2px 1px;" colspan="4">Đã trả:</td>
+                    <td style="text-align: right; padding: 2px 1px;">${formatCurrency(order.paidAmount)}</td>
                 </tr>
                 <tr style="border-top: 1px dashed #333; font-weight: bold;">
-                    <td style="text-align: right; padding: 3px 2px;" colspan="4">Còn lại:</td>
-                    <td style="text-align: right; padding: 3px 2px;">${formatCurrency(order.debtAmount)}</td>
+                    <td style="text-align: right; padding: 2px 1px;" colspan="4">Còn lại:</td>
+                    <td style="text-align: right; padding: 2px 1px;">${formatCurrency(order.debtAmount)}</td>
                 </tr>
             `;
         }
 
         const invoiceHtml = `
-            <div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; color: #000; width: 100%; margin: auto;">
+            <div style="font-family: 'Times New Roman', Times, serif; font-size: 10pt; color: #000; width: 100%; margin: auto;">
                 <header style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 5px; text-align: center;">
                     <div style="text-align: left; flex: 1;"><p style="margin: 0; font-weight: bold;">CỬA HÀNG THÁI HƯNG</p><p style="margin: 0;">ĐC: ........................</p><p style="margin: 0;">SĐT: ........................</p></div>
-                    <div style="flex: 2;"><h1 style="margin: 0; font-size: 18pt; font-weight: bold;">HOÁ ĐƠN BÁN HÀNG</h1></div>
+                    <div style="flex: 2;"><h1 style="margin: 0; font-size: 16pt; font-weight: bold;">HOÁ ĐƠN BÁN HÀNG</h1></div>
                     <div style="flex: 1;"></div>
                 </header>
-                <section style="margin: 10px 0;">
-                    <p style="margin: 2px 0;"><strong>Đơn hàng:</strong> ${order.id}</p>
-                    <p style="margin: 2px 0;"><strong>Khách hàng:</strong> ${order.customerName || 'Khách lẻ'}</p>
-                    <p style="margin: 2px 0;"><strong>Ngày:</strong> ${today}</p>
-                    <p style="margin: 2px 0;"><strong>Loại:</strong> ${isWholesale ? 'Giá Sỉ' : 'Giá Lẻ'}</p>
+                <section style="margin: 5px 0;">
+                    <p style="margin: 1px 0;"><strong>Đơn hàng:</strong> ${order.id}</p>
+                    <p style="margin: 1px 0;"><strong>Khách hàng:</strong> ${order.customerName || 'Khách lẻ'}</p>
+                    <p style="margin: 1px 0;"><strong>Ngày:</strong> ${today}</p>
+                    <p style="margin: 1px 0;"><strong>Loại:</strong> ${isWholesale ? 'Giá Sỉ' : 'Giá Lẻ'}</p>
                 </section>
-                <table style="width: 100%; border-collapse: collapse; font-size: 12pt;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
                     <thead style="border-top: 2px solid #000; border-bottom: 2px solid #000;">
-                        <tr><th style="padding: 4px 2px; text-align: center;">STT</th><th style="padding: 4px 2px; text-align: left;">Tên hàng</th><th style="padding: 4px 2px; text-align: center;">SL</th><th style="padding: 4px 2px; text-align: right;">Đơn giá</th><th style="padding: 4px 2px; text-align: right;">Thành tiền</th></tr>
+                        <tr><th style="padding: 2px 1px; text-align: center;">STT</th><th style="padding: 2px 1px; text-align: left;">Tên hàng</th><th style="padding: 2px 1px; text-align: center;">SL</th><th style="padding: 2px 1px; text-align: right;">Đơn giá</th><th style="padding: 2px 1px; text-align: right;">Thành tiền</th></tr>
                     </thead>
                     <tbody>${itemsHtml}</tbody>
                     <tfoot>${summaryHtml}</tfoot>
                 </table>
-                <footer style="margin-top: 20px; display: flex; justify-content: space-around; font-weight: bold;">
-                    <div style="text-align: center;"><p style="margin: 0;">Khách hàng</p><p style="font-style: italic; font-weight: normal; font-size: 10pt;">(Ký, ghi rõ họ tên)</p></div>
-                    <div style="text-align: center;"><p style="margin: 0;">Người bán hàng</p><p style="font-style: italic; font-weight: normal; font-size: 10pt;">(Ký, ghi rõ họ tên)</p></div>
+                <footer style="margin-top: 15px; display: flex; justify-content: space-around; font-weight: bold;">
+                    <div style="text-align: center;"><p style="margin: 0;">Khách hàng</p><p style="font-style: italic; font-weight: normal; font-size: 9pt;">(Ký, ghi rõ họ tên)</p></div>
+                    <div style="text-align: center;"><p style="margin: 0;">Người bán hàng</p><p style="font-style: italic; font-weight: normal; font-size: 9pt;">(Ký, ghi rõ họ tên)</p></div>
                 </footer>
             </div>
         `;
