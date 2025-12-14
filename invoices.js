@@ -355,6 +355,166 @@ document.addEventListener('DOMContentLoaded', async () => {
         deleteInvoice: deleteInvoice
     };
 
+    // --- Gemini AI Logic ---
+    const scanInvoiceBtn = document.getElementById('scan-invoice-btn');
+    const invoiceFileInput = document.getElementById('invoice-file-input');
+    const apiKeyModal = document.getElementById('api-key-modal');
+    const geminiApiKeyInput = document.getElementById('gemini-api-key-input');
+    const saveApiKeyBtn = document.getElementById('save-api-key-btn');
+    const closeApiKeyModalBtn = document.getElementById('close-api-key-modal-btn');
+    const processingOverlay = document.getElementById('processing-overlay');
+
+    const GEMINI_API_KEY_KEY = 'gemini_api_key';
+
+    const getGeminiKey = () => localStorage.getItem(GEMINI_API_KEY_KEY);
+    const setGeminiKey = (key) => localStorage.setItem(GEMINI_API_KEY_KEY, key);
+
+    scanInvoiceBtn.onclick = () => {
+        const key = getGeminiKey();
+        if (!key) {
+            apiKeyModal.classList.remove('hidden');
+        } else {
+            invoiceFileInput.click();
+        }
+    };
+
+    closeApiKeyModalBtn.onclick = () => apiKeyModal.classList.add('hidden');
+
+    saveApiKeyBtn.onclick = () => {
+        const key = geminiApiKeyInput.value.trim();
+        if (!key) return alert('Vui lòng nhập API Key');
+        setGeminiKey(key);
+        apiKeyModal.classList.add('hidden');
+        invoiceFileInput.click();
+    };
+
+    invoiceFileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Reset input for next selection
+        e.target.value = '';
+
+        processingOverlay.classList.remove('hidden');
+
+        try {
+            const base64 = await fileToBase64(file);
+            const data = await analyzeInvoiceWithGemini(base64, file.type);
+
+            processingOverlay.classList.add('hidden');
+
+            if (data) {
+                // Open modal and pre-fill
+                openModal();
+                if (data.invoice_number) invoiceNumberInput.value = data.invoice_number;
+                if (data.date) {
+                    // Try to parse date 'dd/mm/yyyy' or 'yyyy-mm-dd' to 'yyyy-mm-dd' for input type=date
+                    // Simple heuristic
+                    const d = new Date(data.date);
+                    if (!isNaN(d.getTime())) {
+                        invoiceDateInput.value = d.toISOString().split('T')[0];
+                    }
+                }
+                if (data.seller_name) invoiceSellerInput.value = data.seller_name;
+                if (data.total_amount) {
+                    // Check if total_amount is number or string with currency
+                    let amount = data.total_amount;
+                    if (typeof amount === 'string') {
+                        amount = parseFloat(amount.replace(/[^0-9.]/g, ''));
+                    }
+                    if (!isNaN(amount)) {
+                        invoiceTotalInput.value = new Intl.NumberFormat('vi-VN').format(amount);
+                    }
+                }
+                if (data.note) invoiceNoteInput.value = data.note;
+
+                alert('Đã phân tích hóa đơn thành công! Vui lòng kiểm tra lại thông tin.');
+            }
+        } catch (error) {
+            console.error(error);
+            processingOverlay.classList.add('hidden');
+            alert('Lỗi khi phân tích hóa đơn: ' + error.message);
+        }
+    };
+
+    const fileToBase64 = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                let encoded = reader.result.toString().replace(/^data:(.*,)?/, '');
+                if ((encoded.length % 4) > 0) {
+                    encoded += '='.repeat(4 - (encoded.length % 4));
+                }
+                resolve(encoded);
+            };
+            reader.onerror = error => reject(error);
+        });
+    };
+
+    const analyzeInvoiceWithGemini = async (base64Image, mimeType) => {
+        const apiKey = getGeminiKey();
+        if (!apiKey) throw new Error('API Key not found');
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+        // Prompt for Gemini
+        const promptText = `
+            Please analyze this invoice image and extract the following information in JSON format:
+            {
+                "invoice_number": "string",
+                "date": "YYYY-MM-DD",
+                "seller_name": "string",
+                "total_amount": number (integer or float),
+                "note": "string (summary of items or any special note)"
+            }
+            If a field is missing, return null. 
+            For date, try to convert to YYYY-MM-DD format.
+            For seller_name, extract the main business name.
+            For total_amount, just the final total number.
+        `;
+
+        const payload = {
+            contents: [{
+                parts: [
+                    { text: promptText },
+                    {
+                        inline_data: {
+                            mime_type: mimeType || 'image/jpeg',
+                            data: base64Image
+                        }
+                    }
+                ]
+            }]
+        };
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errBody = await response.text();
+            throw new Error(`Gemini API Error: ${response.status} - ${errBody}`);
+        }
+
+        const result = await response.json();
+
+        try {
+            const textResponse = result.candidates[0].content.parts[0].text;
+            // Extract JSON from potential markdown code blocks
+            const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
+            return JSON.parse(textResponse);
+        } catch (e) {
+            console.error('Failed to parse Gemini response:', result);
+            throw new Error('Không thể đọc kết quả từ AI (Kết quả không đúng định dạng JSON).');
+        }
+    };
+
     // Init
     loadData();
 });
