@@ -356,60 +356,149 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // --- Gemini AI Logic ---
+    // --- Gemini AI Logic ---
     const scanInvoiceBtn = document.getElementById('scan-invoice-btn');
     const invoiceFileInput = document.getElementById('invoice-file-input');
-    const apiKeyModal = document.getElementById('api-key-modal');
-    const geminiApiKeyInput = document.getElementById('gemini-api-key-input');
-    const saveApiKeyBtn = document.getElementById('save-api-key-btn');
-    const closeApiKeyModalBtn = document.getElementById('close-api-key-modal-btn');
     const processingOverlay = document.getElementById('processing-overlay');
 
+    // Hardcoded API Key as requested
+    const HARDCODED_API_KEY = 'AIzaSyAZiiCqh2f4ejl_tEbPbCsbNQPj-xwkByQ';
     const GEMINI_API_KEY_KEY = 'gemini_api_key';
 
-    const getGeminiKey = () => localStorage.getItem(GEMINI_API_KEY_KEY);
-    const setGeminiKey = (key) => localStorage.setItem(GEMINI_API_KEY_KEY, key);
+    // Auto-save the key if not present or different
+    if (localStorage.getItem(GEMINI_API_KEY_KEY) !== HARDCODED_API_KEY) {
+        localStorage.setItem(GEMINI_API_KEY_KEY, HARDCODED_API_KEY);
+    }
 
-    scanInvoiceBtn.onclick = () => {
-        const key = getGeminiKey();
-        if (!key) {
-            apiKeyModal.classList.remove('hidden');
-        } else {
+    // Create UI for Drag & Drop / Paste
+    const createUploadZone = () => {
+        // Remove existing modal if any (for clean re-open)
+        const existingModal = document.getElementById('upload-zone-modal');
+        if (existingModal) existingModal.remove();
+
+        const modalHtml = `
+            <div id="upload-zone-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[70] flex items-center justify-center">
+                <div class="relative bg-white rounded-lg shadow-xl p-8 max-w-lg w-full m-4">
+                    <button id="close-upload-zone" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times fa-lg"></i>
+                    </button>
+                    
+                    <div id="drop-zone" class="border-2 border-dashed border-purple-300 rounded-lg p-10 text-center hover:bg-purple-50 transition-colors cursor-pointer">
+                        <div class="mb-4">
+                            <i class="fas fa-cloud-upload-alt text-5xl text-purple-400"></i>
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Quét Hóa Đơn AI</h3>
+                        <p class="text-gray-500 mb-4">Kéo thả ảnh hóa đơn vào đây</p>
+                        <p class="text-gray-400 text-sm mb-4">- hoặc -</p>
+                        <button id="browse-btn" class="bg-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-700 transition">
+                            Chọn tệp từ máy
+                        </button>
+                        <p class="text-gray-400 text-xs mt-4">Hỗ trợ dán (Ctrl+V) trực tiếp</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        const modal = document.getElementById('upload-zone-modal');
+        const dropZone = document.getElementById('drop-zone');
+        const closeBtn = document.getElementById('close-upload-zone');
+        const browseBtn = document.getElementById('browse-btn');
+
+        // Events
+        const handleFile = async (file) => {
+            if (!file) return;
+            // Check type
+            if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+                alert('Vui lòng chỉ tải lên file ảnh hoặc PDF.');
+                return;
+            }
+
+            modal.classList.add('hidden'); // processing overlay will show next
+            await processFile(file);
+        };
+
+        // Browse
+        browseBtn.onclick = (e) => {
+            e.stopPropagation();
             invoiceFileInput.click();
+        };
+
+        // Drag & Drop
+        dropZone.ondragover = (e) => {
+            e.preventDefault();
+            dropZone.classList.add('bg-purple-100', 'border-purple-500');
+        };
+        dropZone.ondragleave = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('bg-purple-100', 'border-purple-500');
+        };
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('bg-purple-100', 'border-purple-500');
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        };
+
+        // Paste
+        document.onpaste = (e) => {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const file = items[i].getAsFile();
+                    handleFile(file);
+                    break;
+                }
+            }
+        };
+
+        // Close
+        closeBtn.onclick = () => {
+            modal.remove();
+            document.onpaste = null; // cleanup paste listener
+        };
+
+        // Click outside to close
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.remove();
+                document.onpaste = null;
+            }
         }
     };
 
-    closeApiKeyModalBtn.onclick = () => apiKeyModal.classList.add('hidden');
-
-    saveApiKeyBtn.onclick = () => {
-        const key = geminiApiKeyInput.value.trim();
-        if (!key) return alert('Vui lòng nhập API Key');
-        setGeminiKey(key);
-        apiKeyModal.classList.add('hidden');
-        invoiceFileInput.click();
+    scanInvoiceBtn.onclick = () => {
+        createUploadZone();
     };
 
+    // Keep hidden input change handler for browse button
     invoiceFileInput.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        e.target.value = ''; // Reset
 
-        // Reset input for next selection
-        e.target.value = '';
+        // Close modal if open (from browse button click)
+        const modal = document.getElementById('upload-zone-modal');
+        if (modal) modal.remove();
+        document.onpaste = null;
 
+        await processFile(file);
+    };
+
+    const processFile = async (file) => {
         processingOverlay.classList.remove('hidden');
 
         try {
             const base64 = await fileToBase64(file);
-            const data = await analyzeInvoiceWithGemini(base64, file.type);
+            const data = await analyzeInvoiceWithGemini(base64, file.type, HARDCODED_API_KEY);
 
             processingOverlay.classList.add('hidden');
 
             if (data) {
-                // Open modal and pre-fill
                 openModal();
                 if (data.invoice_number) invoiceNumberInput.value = data.invoice_number;
                 if (data.date) {
-                    // Try to parse date 'dd/mm/yyyy' or 'yyyy-mm-dd' to 'yyyy-mm-dd' for input type=date
-                    // Simple heuristic
                     const d = new Date(data.date);
                     if (!isNaN(d.getTime())) {
                         invoiceDateInput.value = d.toISOString().split('T')[0];
@@ -417,7 +506,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 if (data.seller_name) invoiceSellerInput.value = data.seller_name;
                 if (data.total_amount) {
-                    // Check if total_amount is number or string with currency
                     let amount = data.total_amount;
                     if (typeof amount === 'string') {
                         amount = parseFloat(amount.replace(/[^0-9.]/g, ''));
@@ -452,8 +540,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    const analyzeInvoiceWithGemini = async (base64Image, mimeType) => {
-        const apiKey = getGeminiKey();
+    const analyzeInvoiceWithGemini = async (base64Image, mimeType, apiKey) => {
         if (!apiKey) throw new Error('API Key not found');
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
