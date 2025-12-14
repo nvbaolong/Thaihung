@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const processingOverlay = document.getElementById('processing-overlay');
 
     // Hardcoded API Key as requested
-    const HARDCODED_API_KEY = 'AIzaSyCIUo7Y9nB_xkNjZzQXaWmYdcVebRRCpR0';
+    const HARDCODED_API_KEY = 'AIzaSyDXHzdm5nihzEfxiOslK0jnt9hldhj2j3M';
     const GEMINI_API_KEY_KEY = 'gemini_api_key';
 
     // Auto-save the key if not present or different
